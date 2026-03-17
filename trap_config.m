@@ -6,19 +6,27 @@ function C = trap_config()
 % Edit this file once; all trap_run_* scripts use it.
 
     root = fileparts(mfilename('fullpath'));
+    C.root = root;
 
     %% --- Input / output ---
+    % Multi-cohort: TRAP_cohort_CSVs.txt = one CSV path per line (1st line = cohort 1, …).
+    % If that file is missing, single-file mode uses csvPath only.
+    C.cohortListFile = fullfile(root, 'TRAP_cohort_CSVs.txt');
     C.csvPath       = fullfile(root, 'Hansol Lim density channel 561_all.csv');
     C.manifestPath  = fullfile(root, 'TRAP_sample_manifest.csv');
     C.useManifest   = true;   % false = infer delivery/phase from column names (legacy)
 
     C.outRoot       = fullfile(root, 'TRAP_OUTPUT');
-    C.BRANCH_dir    = fullfile(C.outRoot, 'BRANCH_advanced');
-    C.cluster_dir   = fullfile(C.outRoot, 'clustering_sweep');
-    C.flip_dir      = fullfile(C.outRoot, 'flip_downstream');
+    C.BRANCH_dir    = fullfile(C.outRoot, '01_BRANCH_tables_and_figures');
+    C.BRANCH_figDir = fullfile(C.BRANCH_dir, 'figures_described');
+    C.cluster_dir   = fullfile(C.outRoot, '02_clustering_sweep');
+    C.cluster_figDir = fullfile(C.cluster_dir, 'figures_described');
+    C.flip_dir      = fullfile(C.outRoot, '04_flip_downstream');
+    C.flip_figDir   = fullfile(C.flip_dir, 'figures_described');
 
     %% --- v2-style clustering output (for flip input) ---
-    C.v2_outDir     = fullfile(root, 'TRAP_region_clusters_by_phase_density_v2');
+    C.v2_outDir     = fullfile(root, 'TRAP_OUTPUT', '03_region_clustering_v2');
+    C.v2_figDir     = fullfile(C.v2_outDir, 'figures_described');
     C.downstream_mat = fullfile(C.v2_outDir, 'TRAP_downstream_input.mat');
 
     %% --- BRANCH / stats ---

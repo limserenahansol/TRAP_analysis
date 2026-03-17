@@ -8,10 +8,14 @@ function trap_run_clustering_sweep()
         error('CSV not found.');
     end
     outDir = C.cluster_dir;
-    if ~exist(outDir, 'dir')
-        mkdir(outDir);
-    end
+    figDir = C.cluster_figDir;
+    if ~exist(outDir, 'dir'), mkdir(outDir); end
+    if ~exist(figDir, 'dir'), mkdir(figDir); end
+    trap_write_folder_readme(figDir, 'STEP 2a — Clustering sweep (figures)', ...
+        sprintf(['Silhouette vs K, stability matrices, sample PCA per phase.\n' ...
+        'Depth %d–%d regions; samples from manifest (include=1).\n'], C.pca_depth_min, C.pca_depth_max));
     rng(C.rng_seed);
+    kmOpts = statset('MaxIter', 500);
 
     [densMean, Node, sampleNames, ~, GroupPhase] = trap_load_density_LR(C);
     depth = Node.depth;
@@ -45,7 +49,8 @@ function trap_run_clustering_sweep()
         for ki = 1:numel(Ks)
             K = Ks(ki);
             try
-                [idx, ~] = kmeans(Xz, K, 'Replicates', C.kmeans_replicates, 'Distance', 'sqeuclidean');
+                [idx, ~] = kmeans(Xz, K, 'Replicates', C.kmeans_replicates, ...
+                    'Distance', 'sqeuclidean', 'Options', kmOpts);
                 s = silhouette(Xz, idx);
                 sil(ki) = mean(s, 'omitnan');
             catch
@@ -57,7 +62,11 @@ function trap_run_clustering_sweep()
         xlabel('K'); ylabel('Mean silhouette');
         title(sprintf('Regions — %s', ph));
         grid on;
-        exportgraphics(gcf, fullfile(outDir, sprintf('Silhouette_vs_K_regions_%s.png', ph)), 'Resolution', 300);
+        trap_export_figure(gcf, fullfile(figDir, sprintf('01_silhouette_vs_K_regions_%s.png', ph)), ...
+            sprintf(['MEAN SILHOUETTE vs K (regions as rows of data).\n' ...
+            'PHASE: %s only. INPUT: z-scored density per region across mice in this phase.\n' ...
+            'METHOD: k-means (sq Euclidean), varying K; silhouette averaged over regions.\n' ...
+            'USE: pick K where silhouette is relatively high.\n'], ph));
         close(gcf);
 
         %% Stability at best K
@@ -71,7 +80,8 @@ function trap_run_clustering_sweep()
         for r = 1:nRep
             nSub = max(Kstab + 1, round(0.8 * nReg));
             sub = randperm(nReg, nSub);
-            [idx, ~] = kmeans(Xz(sub, :), Kstab, 'Replicates', 20, 'Distance', 'sqeuclidean');
+            [idx, ~] = kmeans(Xz(sub, :), Kstab, 'Replicates', 20, ...
+                'Distance', 'sqeuclidean', 'Options', kmOpts);
             for ii = 1:numel(sub)
                 for jj = ii + 1:numel(sub)
                     a = sub(ii);
@@ -91,7 +101,10 @@ function trap_run_clustering_sweep()
         colorbar;
         title(sprintf('Co-cluster stability K=%d — %s', Kstab, ph));
         axis square;
-        exportgraphics(gcf, fullfile(outDir, sprintf('Stability_coassign_%s.png', ph)), 'Resolution', 300);
+        trap_export_figure(gcf, fullfile(figDir, sprintf('02_stability_cocluster_K%d_%s.png', Kstab, ph)), ...
+            sprintf(['CO-CLUSTER STABILITY (regions x regions).\n' ...
+            'PHASE: %s. K=%d. Each of 50 subsamples: 80%% regions, k-means; fraction of runs two regions share a cluster.\n' ...
+            'BRIGHT = often same cluster (stable pairing).\n'], ph, Kstab));
         close(gcf);
 
         %% Mice: PCA on samples (rows = mice)
@@ -99,7 +112,8 @@ function trap_run_clustering_sweep()
         nS = size(Xs, 1);
         if nS >= 3
             Km = min(3, nS - 1);
-            [idxM, ~] = kmeans(Xs, Km, 'Replicates', 25, 'Distance', 'sqeuclidean');
+            [idxM, ~] = kmeans(Xs, Km, 'Replicates', 25, ...
+                'Distance', 'sqeuclidean', 'Options', kmOpts);
         else
             idxM = ones(nS, 1);
         end
@@ -122,7 +136,10 @@ function trap_run_clustering_sweep()
         title(sprintf('Samples (mice) — %s (k-means k=%d on region vectors)', ph, max(idxM)));
         grid on;
         legend('Location', 'best');
-        exportgraphics(gcf, fullfile(outDir, sprintf('Sample_PCA_%s.png', ph)), 'Resolution', 300);
+        trap_export_figure(gcf, fullfile(figDir, sprintf('03_sample_PCA_mice_%s.png', ph)), ...
+            sprintf(['SAMPLES (MICE) in PCA space.\n' ...
+            'PHASE: %s. Each point = one mouse; coordinates = PCA of that mouse''s region-density vector.\n' ...
+            'Colors = k-means on mice (exploratory). Labels = CSV column stems.\n'], ph));
         close(gcf);
     end
     fprintf('trap_run_clustering_sweep → %s\n', outDir);

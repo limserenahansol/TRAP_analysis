@@ -1,0 +1,5 @@
+# One TRAP density CSV per cohort (same Allen atlas row order / same ids).
+# Line order = cohort_id in TRAP_sample_manifest.csv (1, 2, 3, …)
+# Paths relative to TRAP_pipeline folder or absolute.
+
+Hansol Lim density channel 561_all.csv

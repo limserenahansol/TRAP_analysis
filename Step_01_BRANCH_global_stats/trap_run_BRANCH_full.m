@@ -9,71 +9,24 @@ function trap_run_BRANCH_full()
 %   Run: >> trap_run_BRANCH_full
 
     C = trap_config();
-    if ~isfile(C.csvPath)
-        error('CSV not found: %s', C.csvPath);
-    end
+    paths = trap_read_cohort_paths(C);
     outDir = C.BRANCH_dir;
-    if ~exist(outDir, 'dir')
-        mkdir(outDir);
-    end
+    figDir = C.BRANCH_figDir;
+    if ~exist(outDir, 'dir'), mkdir(outDir); end
+    if ~exist(figDir, 'dir'), mkdir(figDir); end
+    trap_write_folder_readme(figDir, 'STEP 1 — BRANCH / whole-brain density stats (figures in this folder)', ...
+        sprintf(['Each .png has a matching .txt describing comparisons and statistics.\n\n' ...
+        'Tables (CSV) are in the parent folder: %s\n\n' ...
+        'Data: TRAP density (cells/mm^3), L/R hemispheres averaged.\n' ...
+        'Samples used: from TRAP_sample_manifest.csv (include=1).\n'], outDir));
 
-    fprintf('===== TRAP_RUN_BRANCH_FULL =====\n');
-    fprintf('CSV: %s\nOut: %s\nFDR: %s  bootstrap_B=%d\n', ...
-        C.csvPath, outDir, C.fdrMethod, C.bootstrap_B);
+    fprintf('===== TRAP_RUN_BRANCH_FULL (%d cohort CSVs) =====\n', numel(paths));
+    for ip = 1:numel(paths), fprintf('  %d: %s\n', ip, paths{ip}); end
+    fprintf('Out: %s | FDR: %s | bootstrap_B=%d\n', outDir, C.fdrMethod, C.bootstrap_B);
 
-    T = readtable(C.csvPath, 'VariableNamingRule', 'preserve');
-    metaCols = {'id', 'name', 'acronym', 'parent_structure_id', 'depth'};
-    isMeta = ismember(T.Properties.VariableNames, metaCols);
-    NodeFull = T(:, isMeta);
-
-    allVarNames = string(T.Properties.VariableNames);
-    isDensity = contains(allVarNames, "density (cells/mm^3)") & ...
-                ~contains(allVarNames, "AVERAGE density");
-    densityColNames = allVarNames(isDensity);
-    if isempty(densityColNames)
-        error('No density columns found.');
-    end
-
-    nAll = numel(densityColNames);
-    [GroupDelivery, GroupPhase, includeMask, ~] = trap_sample_groups(densityColNames, C);
-
-    use = includeMask;
-    sampleNames = densityColNames(use);
-    GroupA = GroupDelivery(use);
-    GroupB = GroupPhase(use);
-    DataDensityFull = T{:, isDensity};
-    DataDensityFull = DataDensityFull(:, use);
+    [densMean, Node, sampleNames, GroupA, GroupB] = trap_load_pooled_density_LR(C);
     nSamples = numel(sampleNames);
-
-    fprintf('Using %d / %d density samples (after manifest include).\n', nSamples, nAll);
-
-    % L/R average
-    acrsFull = string(NodeFull.acronym);
-    isLeft = endsWith(acrsFull, "-L");
-    isRight = endsWith(acrsFull, "-R");
-    isGlobal = ~(isLeft | isRight);
-    keepMask = isLeft | isGlobal;
-    Node = NodeFull(keepMask, :);
-    idxKeep = find(keepMask);
-    nRegions = height(Node);
-
-    densMean = nan(nRegions, nSamples);
-    for ii = 1:nRegions
-        idxG = idxKeep(ii);
-        ac = acrsFull(idxG);
-        if endsWith(ac, "-L")
-            base = extractBefore(ac, "-L");
-            acR = base + "-R";
-            idxR = find(acrsFull == acR, 1);
-            if ~isempty(idxR)
-                densMean(ii, :) = (DataDensityFull(idxG, :) + DataDensityFull(idxR, :)) / 2;
-            else
-                densMean(ii, :) = DataDensityFull(idxG, :);
-            end
-        else
-            densMean(ii, :) = DataDensityFull(idxG, :);
-        end
-    end
+    fprintf('Pooled %d samples (manifest include=1).\n', nSamples);
 
     maskActive = (GroupA == "Active");
     maskPassive = (GroupA == "Passive");
@@ -134,15 +87,15 @@ function trap_run_BRANCH_full()
     writetable(Results, fullfile(outDir, 'BRANCH_stats_density.csv'));
     fprintf('Wrote %s\n', fullfile(outDir, 'BRANCH_stats_density.csv'));
 
-    trap_branch_treeplot(Node, Results, outDir);
-    trap_branch_pca_umap(densMean, Node, GroupA, GroupB, sampleNames, outDir, C);
-    trap_branch_dendrogram(densMean, Node, sampleNames, outDir, C);
+    trap_branch_treeplot(Node, Results, figDir, C);
+    trap_branch_pca_umap(densMean, Node, GroupA, GroupB, sampleNames, figDir, C);
+    trap_branch_dendrogram(densMean, Node, sampleNames, figDir, C);
     trap_branch_paired7597(densMean, sampleNames, GroupA, GroupB, outDir);
 
     fprintf('===== TRAP_RUN_BRANCH_FULL done =====\n');
 end
 
-function trap_branch_treeplot(Node, Results, outDir)
+function trap_branch_treeplot(Node, Results, figDir, C)
     q = Results.q_active_vs_passive;
     cVal = -log10(q);
     cVal(~isfinite(cVal)) = 0;
@@ -172,11 +125,14 @@ function trap_branch_treeplot(Node, Results, outDir)
     colorbar;
     title('Tree: Active vs Passive (q-values)');
     axis off;
-    exportgraphics(gcf, fullfile(outDir, 'TreePlot_qA_density.png'), 'Resolution', 300);
+    trap_export_figure(gcf, fullfile(figDir, '01_tree_Allen_hierarchy_ActiveVsPassive_qFDR.png'), ...
+        sprintf(['PLOT: Allen atlas tree (parent_structure_id / depth).\n' ...
+        'COMPARISON: Active vs Passive delivery — per-region ranksum; q = %s FDR.\n' ...
+        'COLOR/SIZE: -log10(q). NOT a spatial brain map.\n'], C.fdrMethod));
     close(gcf);
 end
 
-function trap_branch_pca_umap(densMean, Node, GroupA, GroupB, sampleNames, outDir, C)
+function trap_branch_pca_umap(densMean, Node, GroupA, GroupB, sampleNames, figDir, C)
     depth = Node.depth;
     maskDepth = depth >= C.pca_depth_min & depth <= C.pca_depth_max;
     if ~any(maskDepth)
@@ -192,7 +148,11 @@ function trap_branch_pca_umap(densMean, Node, GroupA, GroupB, sampleNames, outDi
     ylabel(sprintf('PC2 (%.1f%%)', explained(2)));
     title('PCA: Active vs Passive');
     grid on;
-    exportgraphics(gcf, fullfile(outDir, 'PCA_density.png'), 'Resolution', 300);
+    trap_export_figure(gcf, fullfile(figDir, '02_PCA_samples_by_delivery_ActiveVsPassive.png'), ...
+        ['PLOT: PCA of SAMPLES (each point = one mouse/brain).\n' ...
+        'INPUT: Rows = samples, cols = region density (depth ' sprintf('%d–%d', C.pca_depth_min, C.pca_depth_max) ').\n' ...
+        'COMPARISON: Points colored by Delivery (Active vs Passive) — not a statistical test on the plot; exploratory separation.\n' ...
+        'METHOD: princomp-style PCA (MATLAB pca).\n']);
     close(gcf);
     try
         if exist('run_umap', 'file')
@@ -200,14 +160,15 @@ function trap_branch_pca_umap(densMean, Node, GroupA, GroupB, sampleNames, outDi
             figure('Color', 'w'); hold on;
             gscatter(Y(:, 1), Y(:, 2), GroupA_c);
             title('UMAP: Active vs Passive');
-            exportgraphics(gcf, fullfile(outDir, 'UMAP_density.png'), 'Resolution', 300);
+            trap_export_figure(gcf, fullfile(figDir, '03_UMAP_samples_by_delivery_ActiveVsPassive.png'), ...
+                'Same as 02_PCA but UMAP embedding (nonlinear). Requires run_umap on path.\n');
             close(gcf);
         end
     catch
     end
 end
 
-function trap_branch_dendrogram(densMean, Node, sampleNames, outDir, C)
+function trap_branch_dendrogram(densMean, Node, sampleNames, figDir, C)
     depth = Node.depth;
     maskDepth = depth >= C.pca_depth_min & depth <= C.pca_depth_max;
     if ~any(maskDepth)
@@ -221,7 +182,11 @@ function trap_branch_dendrogram(densMean, Node, sampleNames, outDir, C)
     dendrogram(Z, 0, 'Labels', cellstr(sampleNames));
     set(gca, 'TickLabelInterpreter', 'none');
     title('Sample dendrogram');
-    exportgraphics(gcf, fullfile(outDir, 'Dendrogram_density.png'), 'Resolution', 300);
+    trap_export_figure(gcf, fullfile(figDir, '04_dendrogram_samples_euclidean.png'), ...
+        ['PLOT: Hierarchical clustering of SAMPLES.\n' ...
+        'DISTANCE: Euclidean between each sample''s vector of region densities (depth ' sprintf('%d–%d', C.pca_depth_min, C.pca_depth_max) ').\n' ...
+        'LINKAGE: average.\n' ...
+        'INTERPRETATION: Similar brains cluster together (pattern similarity across regions).\n']);
     close(gcf);
 end
 

@@ -35,7 +35,6 @@ function TRAP_region_clusters_by_phase_density_v2()
 
 %% ============== USER SETTINGS =====================
 C = trap_config();
-csvPath       = C.csvPath;
 outDir        = C.v2_outDir;
 K             = 4;   % number of clusters
 N_per_cluster = 15;  % representative regions per cluster
@@ -47,91 +46,38 @@ end
 
 if ~exist(outDir,'dir'), mkdir(outDir); end
 
+paths = trap_read_cohort_paths(C);
 fprintf("===== TRAP region clusters by phase (density) — v2 (depth 5/6/7 rule) =====\n");
-fprintf("Input CSV : %s\n", csvPath);
+fprintf("Cohort CSVs (%d):\n", numel(paths));
+for ip = 1:numel(paths), fprintf("  %d: %s\n", ip, paths{ip}); end
 fprintf("Output dir: %s\n", outDir);
 
-%% 1. Load table and density columns
-T = readtable(csvPath,'VariableNamingRule','preserve');
-
-metaCols = {'id','name','acronym','parent_structure_id','depth'};
-isMeta   = ismember(T.Properties.VariableNames, metaCols);
-NodeFull = T(:, isMeta);
-
-allVarNames  = T.Properties.VariableNames;
-isDensityCol = contains(allVarNames, "density (cells/mm^3)") & ...
-               ~contains(allVarNames, "AVERAGE density");
-densityCols  = allVarNames(isDensityCol);
-
-if isempty(densityCols)
-    error('No density (cells/mm^3) columns found.');
-end
-
-DataDensityFull = T{:, isDensityCol};    % regions x samples
-sampleNames     = string(densityCols(:));
-nSamples        = numel(sampleNames);
-
-fprintf("Found %d samples (density columns)\n", nSamples);
-
-%% 2. Assign groups: Delivery (Active/Passive), Phase
-[GroupDelivery, GroupPhase] = assign_groups_phase(sampleNames);
+%% 1–3. Pool cohorts (manifest) + L/R average (inside loader)
+[densAll, NodeLR, sampleNames, GroupDelivery, GroupPhase] = trap_load_pooled_density_LR(C);
 
 summaryTbl = table(sampleNames, GroupDelivery, GroupPhase, ...
     'VariableNames', {'Sample','Delivery','Phase'});
 disp(summaryTbl);
 
-% Exclude "Exclude" phase (8605_black)
 maskUseSample = GroupPhase ~= "Exclude";
 if ~all(maskUseSample)
-    fprintf("Excluding %d samples (Phase=='Exclude'):\n", nnz(~maskUseSample));
-    disp(summaryTbl(~maskUseSample,:));
+    fprintf("Dropping %d samples (Phase==Exclude):\n", nnz(~maskUseSample));
+    disp(summaryTbl(~maskUseSample, :));
 end
 
-GroupDelivery   = GroupDelivery(maskUseSample);
-GroupPhase      = GroupPhase(maskUseSample);
-sampleNames     = sampleNames(maskUseSample);
-DataDensityFull = DataDensityFull(:, maskUseSample);
-nSamples        = numel(sampleNames);
+GroupDelivery = GroupDelivery(maskUseSample);
+GroupPhase    = GroupPhase(maskUseSample);
+sampleNames   = sampleNames(maskUseSample);
+densLR        = densAll(:, maskUseSample);
+nSamples      = size(densLR, 2);
 
-fprintf("Using %d samples after exclusion.\n", nSamples);
+fprintf("Using %d samples after Exclude filter.\n", nSamples);
 
-%% 3. Average Left / Right
-acrsFull = string(NodeFull.acronym);
-isLeft   = endsWith(acrsFull,"-L");
-isRight  = endsWith(acrsFull,"-R");
-isGlobal = ~(isLeft | isRight);   % root / background, no hemisphere label
-
-keepMaskLR = isLeft | isGlobal;   % only left + global nodes
-NodeLR     = NodeFull(keepMaskLR,:);
-idxKeep    = find(keepMaskLR);
-nRegions   = height(NodeLR);
-
-densLR = nan(nRegions, nSamples); % regions x samples
-
-for ii = 1:nRegions
-    idxG = idxKeep(ii);
-    ac   = acrsFull(idxG);
-
-    if endsWith(ac,"-L")
-        base = extractBefore(ac,"-L");
-        acR  = base + "-R";
-        idxR = find(acrsFull == acR, 1);
-
-        if ~isempty(idxR)
-            densLR(ii,:) = (DataDensityFull(idxG,:) + DataDensityFull(idxR,:)) / 2;
-        else
-            densLR(ii,:) = DataDensityFull(idxG,:);
-        end
-    else
-        % global node, no hemisphere partner
-        densLR(ii,:) = DataDensityFull(idxG,:);
-    end
-end
-
-% Drop "-L" from acronyms so labels are FRP, BLA, etc.
 acLR = string(NodeLR.acronym);
-acLR = erase(acLR,"-L");
+acLR = erase(acLR, "-L");
 NodeLR.acronym = acLR;
+
+csvPath = strjoin(paths, ' | ');
 
 %% 3b. Depth 5/6/7 hierarchy rule + depth-4 parent label
 depthLR    = NodeLR.depth;
@@ -265,6 +211,15 @@ end
 
 NodeSel.parent_d4_acronym = parentD4;
 
+figDir = C.v2_figDir;
+if ~exist(figDir, 'dir'), mkdir(figDir); end
+trap_write_folder_readme(figDir, 'STEP 3 — Region clustering v2 (figures)', ...
+    sprintf(['Each region = one brain area (depth 5/6/7 rule). Each phase analyzed separately.\n' ...
+    'UMAP: install run_umap for nonlinear embedding; otherwise PCA (PCA is weak when very few mice in a phase).\n' ...
+    'Tables (RepRegions CSV, .mat) are in: %s\n'], outDir));
+
+kmOpts = statset('MaxIter', 500);
+
 %% 4. Phase-wise region clustering and plots
 phasesToUse = ["Withdrawal","Reinstatement"];
 
@@ -303,17 +258,25 @@ for ph = phasesToUse
         yLabelStr = 'UMAP2';
     else
         fprintf('UMAP not found — using PCA for phase %s.\n', ph);
-        [~, score, ~, ~, expl] = pca(Xz_valid); %#ok<ASGLU>
-        PC1 = score(:,1);
-        PC2 = score(:,2);
-        xLabelStr = sprintf('PC1 (%.1f%% var)', expl(1));
-        yLabelStr = sprintf('PC2 (%.1f%% var)', expl(2));
+        warnPCA = warning('off', 'all');
+        [~, score, ~, ~, expl] = pca(Xz_valid, 'NumComponents', 2); %#ok<ASGLU>
+        warning(warnPCA);
+        PC1 = score(:, 1);
+        if size(score, 2) >= 2
+            PC2 = score(:, 2);
+            xLabelStr = sprintf('PC1 (%.1f%% var)', expl(1));
+            yLabelStr = sprintf('PC2 (%.1f%% var)', expl(2));
+        else
+            PC2 = zeros(size(PC1));
+            xLabelStr = sprintf('PC1 (%.1f%% var)', expl(1));
+            yLabelStr = 'PC2 (n/a — very few samples, rank-deficient)';
+        end
     end
 
     % --- k-means clustering on z-scored data ---
     rng(0);   % reproducible
     clusterIdx = kmeans(Xz_valid, K, ...
-        'Replicates', kmRep, 'Distance','sqeuclidean');
+        'Replicates', kmRep, 'Distance', 'sqeuclidean', 'Options', kmOpts);
 
     % --- silhouette for representative regions ---
     s = silhouette(Xz_valid, clusterIdx);
@@ -402,8 +365,13 @@ for ph = phasesToUse
     end
     legend(legStr,'Location','bestoutside');
 
-    outPNG = fullfile(outDir, sprintf('RegionEmbedding_%s_density.png', ph));
-    exportgraphics(gcf, outPNG, 'Resolution',300);
+    if useUMAP, embName = 'UMAP'; else, embName = 'PCA'; end
+    outPNG = fullfile(figDir, sprintf('01_region_embedding_%s_%s.png', embName, ph));
+    trap_export_figure(gcf, outPNG, sprintf([ ...
+        'POINTS = brain REGIONS (not mice). Axes = %s of rows of Xz (z-scored density across mice in this phase).\n' ...
+        'PHASE: %s only. COLOR = k-means cluster (K=%d, sq-Euclidean, z-scored per region).\n' ...
+        'LABELS = representative regions (high silhouette). Compare Active vs Passive in bar plots (separate figures).\n'], ...
+        embName, ph, K));
     close(gcf);
 
     %% 4-2. Representative region density plots (raw & z-score)
@@ -431,17 +399,21 @@ for ph = phasesToUse
 
     delivery_phase = GroupDelivery(idxPhase);        % Active / Passive
 
-    % (a) raw density
     plot_region_density_with_clusters( ...
         X_phase, repAxisLabels, delivery_phase, repClusterID, colors, ...
-        sprintf('Region density (%s, depth rule fixed)', ph), ...
-        fullfile(outDir, sprintf('RegionDensity_%s_density.png', ph)));
+        sprintf('Region density (%s)', ph), ...
+        fullfile(figDir, sprintf('02_rep_regions_RAW_density_%s.png', ph)), ...
+        sprintf(['Y = raw density (cells/mm^3). PHASE: %s only.\n' ...
+        'X = representative regions (from k-means clusters on embedding).\n' ...
+        'RED = Active delivery, BLUE = Passive. Error bars = mean±SEM across mice in this phase.\n' ...
+        'Top colored bars = k-means cluster ID (same as embedding plot).\n'], ph));
 
-    % (b) z-scored density
     plot_region_density_with_clusters( ...
         Xz_phase, repAxisLabels, delivery_phase, repClusterID, colors, ...
-        sprintf('Region z-scored density (%s, depth rule fixed)', ph), ...
-        fullfile(outDir, sprintf('RegionZscoreDensity_%s_density.png', ph)));
+        sprintf('Z-scored density (%s)', ph), ...
+        fullfile(figDir, sprintf('03_rep_regions_ZSCORED_within_phase_%s.png', ph)), ...
+        sprintf(['Y = z-score within this phase (mean 0, std 1 per region across mice). PHASE: %s.\n' ...
+        'Same layout as 02 — compares Active vs Passive after removing phase-wide level shifts.\n'], ph));
 end
 
 fprintf("===== DONE TRAP_region_clusters_by_phase_density_v2 =====\n");
@@ -502,7 +474,7 @@ end
 % Helper: region density scatter + mean±SEM + cluster annotation
 %% =====================================================================
 function plot_region_density_with_clusters(X, regionNames, deliveryLabels, ...
-    clusterID, clusterColors, titleStr, outPNG)
+    clusterID, clusterColors, titleStr, outPNG, readmeTxt)
 
 [nRegions, ~] = size(X);
 jit  = 0.12;
@@ -576,6 +548,6 @@ for k = 1:K
         'FontSize',9);
 end
 
-exportgraphics(gcf, outPNG, 'Resolution',300);
+trap_export_figure(gcf, outPNG, readmeTxt);
 close(gcf);
 end

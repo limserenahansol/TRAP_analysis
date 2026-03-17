@@ -3,6 +3,8 @@
 Analysis pipeline for **TRAP whole-brain imaging**: density (cells/mm³) per Allen region, **Active vs Passive**, and **phase**. BRANCH-style stats, PCA/UMAP, k-means, correlations, flip-direction analysis.
 
 **Run order:** [`WORKFLOW.md`](WORKFLOW.md) — step folders **1 → 5**.  
+**Where code vs outputs live:** [`FOLDERS_GUIDE.md`](FOLDERS_GUIDE.md)  
+**Add cohorts / mice:** [`WHEN_YOU_ADD_MICE_EN_KR.md`](WHEN_YOU_ADD_MICE_EN_KR.md)  
 **Technical index:** [`PIPELINE_ROADMAP.md`](PIPELINE_ROADMAP.md)
 
 ---
@@ -10,8 +12,10 @@ Analysis pipeline for **TRAP whole-brain imaging**: density (cells/mm³) per All
 ## Before you run
 
 1. **`init_TRAP_pipeline`** once per MATLAB session (adds all step folders + `shared/` to path).
-2. Edit **`trap_config.m`** (CSV path, outputs).
-3. Edit **`MOUSE_COHORT.txt`** and **`TRAP_sample_manifest.csv`** when you add mice.
+2. Edit **`trap_config.m`** (fallback `csvPath`, outputs).
+3. **`TRAP_cohort_CSVs.txt`** — one density CSV per line (cohort 1, 2, …). Same format for every file; atlas **`id`**s must match across files.
+4. **`TRAP_sample_manifest.csv`** — each sample: **`cohort_id`** (line index), **`column_name`**, delivery, phase, include.
+5. **`MOUSE_COHORT.txt`** — optional notes.
 
 ---
 
@@ -27,6 +31,10 @@ Analysis pipeline for **TRAP whole-brain imaging**: density (cells/mm³) per All
 | **`Step_05_utilities`** | e.g. export region name list |
 
 Root: **`trap_config.m`**, **`init_TRAP_pipeline.m`**, manifest, cohort text, input CSV.
+
+**Generated outputs (`TRAP_OUTPUT/`):**  
+`01_BRANCH_tables_and_figures/figures_described/` · `02_clustering_sweep/figures_described/` · `03_region_clustering_v2/figures_described/` · `04_flip_downstream/figures_described/` — each PNG has a **same-name `.txt`** explaining comparisons & methods.  
+See **`WHEN_YOU_ADD_MICE_EN_KR.md`**, **`WARNINGS_EXPLAINED_EN_KR.md`**.
 
 ---
 

@@ -9,7 +9,10 @@ function RUN_PIPELINE_ALL()
     init_TRAP_pipeline;
 
     C = trap_config();
-    fprintf('\n========== TRAP pipeline runMode=%s ==========\n\n', C.runMode);
+    pc = trap_read_cohort_paths(C);
+    fprintf('\n========== TRAP pipeline | %d cohort CSV(s) | runMode=%s ==========\n', ...
+        numel(pc), C.runMode);
+    fprintf('(Add lines to TRAP_cohort_CSVs.txt + manifest rows to pool more cohorts.)\n\n');
 
     fprintf('--- Step 1: BRANCH (trap_run_BRANCH_full) ---\n');
     trap_run_BRANCH_full;
@@ -27,6 +30,9 @@ function RUN_PIPELINE_ALL()
     TRAP_export_depth56_region_names;
 
     fprintf('\n========== DONE ==========\n');
-    fprintf('Outputs under:\n  %s\n  %s\n  %s\n  %s\n', ...
-        C.BRANCH_dir, C.v2_outDir, C.cluster_dir, C.flip_dir);
+    fprintf(['Outputs:\n  Tables + figures: %s (see figures_described/)\n' ...
+        '  %s (figures_described/)\n  %s + RepRegions CSV + .mat\n' ...
+        '  %s (figures_described/)\n'], ...
+        C.BRANCH_dir, C.cluster_dir, C.v2_outDir, C.flip_dir);
+    fprintf('See WHEN_YOU_ADD_MICE_EN_KR.md and WARNINGS_EXPLAINED_EN_KR.md\n');
 end

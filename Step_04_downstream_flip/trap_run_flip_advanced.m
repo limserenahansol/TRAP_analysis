@@ -17,11 +17,13 @@ function trap_run_flip_advanced()
     md = C.flip_min_abs_delta;
     Ntop = C.flip_topN;
     nPerm = C.flip_n_perm;
-
-    downDir = fullfile(C.flip_dir);
-    if ~exist(downDir, 'dir')
-        mkdir(downDir);
-    end
+    downDir = C.flip_dir;
+    figDir = C.flip_figDir;
+    if ~exist(downDir, 'dir'), mkdir(downDir); end
+    if ~exist(figDir, 'dir'), mkdir(figDir); end
+    trap_write_folder_readme(figDir, 'STEP 4 — Flip-direction analysis (figures)', ...
+        sprintf(['FLIP = Active−Passive sign differs between Reinstatement vs Withdrawal.\n' ...
+        'min_abs_delta=%.3g. CSV tables in: %s\n'], md, downDir));
 
     if ismember('parent_d4_acronym', NodeSel.Properties.VariableNames)
         parentD4 = string(NodeSel.parent_d4_acronym);
@@ -125,17 +127,24 @@ function trap_run_flip_advanced()
     Z_rein = zscore(X_rein, 0, 2);
     Z_with = zscore(X_with, 0, 2);
     make_flip_plot(topA, X_rein, X_with, delRein, delWith, regionLabel, ...
-        sprintf('A: Rein+ With− (n=%d, p_perm=%.4f)', nA, pA), fullfile(downDir, 'FlipA_raw_top.png'));
+        sprintf('A: Rein+ With− (top %d)', numel(topA)), fullfile(figDir, '01_FlipConditionA_ReinPlus_WithMinus_raw.png'), ...
+        sprintf(['CONDITION A: dRein = mean(Act)−mean(Pas) in REINSTATEMENT > %.3g; dWith in WITHDRAWAL < −%.3g.\n' ...
+        'TOP %d regions by |dRein|+|dWith|. Triangles = Reinstatement, squares = Withdrawal.\n' ...
+        'Permutation p_A = %.4f (n=%d regions, %d perms).\n'], md, md, numel(topA), pA, nA, nPerm));
     make_flip_plot(topB, X_rein, X_with, delRein, delWith, regionLabel, ...
-        sprintf('B: Rein− With+ (n=%d, p_perm=%.4f)', nB, pB), fullfile(downDir, 'FlipB_raw_top.png'));
+        sprintf('B: Rein− With+ (top %d)', numel(topB)), fullfile(figDir, '02_FlipConditionB_ReinMinus_WithPlus_raw.png'), ...
+        sprintf(['CONDITION B: Reinstatement Active−Passive < −%.3g AND Withdrawal > %.3g.\n' ...
+        'p_perm_B = %.4f. Top %d regions.\n'], md, md, pB, numel(topB)));
     make_flip_plot(topC, X_rein, X_with, delRein, delWith, regionLabel, ...
-        sprintf('C: Rein+ With+ (n=%d, p_perm=%.4f)', nC, pC), fullfile(downDir, 'FlipC_raw_top.png'));
+        sprintf('C: Rein+ With+ (top %d)', numel(topC)), fullfile(figDir, '03_FlipConditionC_bothPositive_raw.png'), ...
+        sprintf(['CONDITION C: Active>Pasive in BOTH phases (both diffs > %.3g).\n' ...
+        'p_perm_C = %.4f. Top %d regions.\n'], md, pC, numel(topC)));
 
     fprintf('trap_run_flip_advanced → %s\n', downDir);
     disp(Tperm);
 end
 
-function make_flip_plot(idxTop, X_rein, X_with, delRein, delWith, regionLabels, ttl, outPNG)
+function make_flip_plot(idxTop, X_rein, X_with, delRein, delWith, regionLabels, ttl, outPNG, readmeTxt)
     if isempty(idxTop)
         return;
     end
@@ -170,6 +179,6 @@ function make_flip_plot(idxTop, X_rein, X_with, delRein, delWith, regionLabels, 
     h(3) = scatter(nan, nan, 40, colPassive, 's', 'filled');
     h(4) = scatter(nan, nan, 40, colActive, 's', 'filled');
     legend(h, {'Pas Rein', 'Act Rein', 'Pas With', 'Act With'});
-    exportgraphics(gcf, outPNG, 'Resolution', 300);
+    trap_export_figure(gcf, outPNG, readmeTxt);
     close(gcf);
 end

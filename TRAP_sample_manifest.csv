@@ -1,9 +1,9 @@
-column_name,delivery,phase,include,mouse_id
-"HaLi_102125_01_7597_black density (cells/mm^3)",Passive,Withdrawal,1,HaLi_102125_01
-"HaLi_102125_02_7597_orange density (cells/mm^3)",Active,Withdrawal,1,HaLi_102125_02
-"HaLi_102125_03_8768_one density (cells/mm^3)",Active,Reinstatement,1,HaLi_102125_03
-"HaLi_102125_04_8606_white density (cells/mm^3)",Active,Reinstatement,1,HaLi_102125_04
-"HaLi_102125_05_8605_white density (cells/mm^3)",Passive,Reinstatement,1,HaLi_102125_05
-"HaLi_102125_06_8606_black density (cells/mm^3)",Passive,Reinstatement,1,HaLi_102125_06
-"HaLi_102125_07_8606_red density (cells/mm^3)",Active,Reexposure,1,HaLi_102125_07
-"HaLi_102125_08_8605_black density (cells/mm^3)",Passive,Reexposure,0,HaLi_102125_08
+cohort_id,column_name,delivery,phase,include,mouse_id
+1,"HaLi_102125_01_7597_black density (cells/mm^3)",Passive,Withdrawal,1,HaLi_102125_01
+1,"HaLi_102125_02_7597_orange density (cells/mm^3)",Active,Withdrawal,1,HaLi_102125_02
+1,"HaLi_102125_03_8768_one density (cells/mm^3)",Active,Reinstatement,1,HaLi_102125_03
+1,"HaLi_102125_04_8606_white density (cells/mm^3)",Active,Reinstatement,1,HaLi_102125_04
+1,"HaLi_102125_05_8605_white density (cells/mm^3)",Passive,Reinstatement,1,HaLi_102125_05
+1,"HaLi_102125_06_8606_black density (cells/mm^3)",Passive,Reinstatement,1,HaLi_102125_06
+1,"HaLi_102125_07_8606_red density (cells/mm^3)",Active,Reexposure,1,HaLi_102125_07
+1,"HaLi_102125_08_8605_black density (cells/mm^3)",Passive,Reexposure,0,HaLi_102125_08
