@@ -1,4 +1,4 @@
-function TRAP_sample_correlation5()
+function TRAP_sample_correlation4()
 % -----------------------------------------------------------
 % Build SAMPLE × SAMPLE correlation matrix using TRAP density.
 %

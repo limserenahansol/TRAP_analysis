@@ -1,0 +1,37 @@
+================================================================================
+MOUSE COHORT & SAMPLE METADATA  (edit when you add mice)
+================================================================================
+
+Use this file as your running log. You can open it in Word or any editor.
+
+When you add a new animal / new CSV column:
+  1. Add a row below (or duplicate the table row).
+  2. Copy the same information into TRAP_sample_manifest.csv so MATLAB reads it.
+     (column_name must match the exact header in your density CSV.)
+
+Delivery:  Active | Passive
+Phase:     Withdrawal | Reinstatement | Reexposure | Exclude | Unknown
+include:   1 = use in analyses that respect the manifest; 0 = drop (e.g. pilot)
+
+--------------------------------------------------------------------------------
+mouse_id          delivery   phase           include  notes
+--------------------------------------------------------------------------------
+HaLi_102125_01    Passive    Withdrawal      1
+HaLi_102125_02    Active     Withdrawal      1
+HaLi_102125_03    Active     Reinstatement   1
+HaLi_102125_04    Active     Reinstatement   1
+HaLi_102125_05    Passive    Reinstatement   1
+HaLi_102125_06    Passive    Reinstatement   1
+HaLi_102125_07    Active     Reexposure      1
+HaLi_102125_08    Passive    Reexposure      0        example: excluded in v2 clustering
+--------------------------------------------------------------------------------
+
+Density column names in CSV (must match manifest column_name):
+
+  HaLi_102125_01_7597_black density (cells/mm^3)
+  HaLi_102125_02_7597_orange density (cells/mm^3)
+  ... (add new lines when you add columns)
+
+================================================================================
+END — keep this file in sync with TRAP_sample_manifest.csv
+================================================================================

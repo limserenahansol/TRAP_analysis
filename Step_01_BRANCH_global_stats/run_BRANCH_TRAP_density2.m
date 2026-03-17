@@ -61,7 +61,7 @@ for i = 1:nSamples
     elseif contains(nm,"8768") || contains(nm,"8606_white") || ...
            contains(nm,"8605_white") || contains(nm,"8606_black")
         GroupB(i) = "Reinstatement";
-    elseif contains(nm,"8060") || contains(nm,"8605_black")
+    elseif contains(nm,"8606_red") || contains(nm,"8605_black")
         GroupB(i) = "Reexposure";
     else
         GroupB(i) = "Unknown";

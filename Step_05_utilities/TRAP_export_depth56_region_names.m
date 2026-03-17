@@ -13,9 +13,9 @@ function TRAP_export_depth56_region_names()
 %
 % baseDir 는 v2 코드에서 사용한 폴더와 동일해야 함.
 
-    % ==== 1. v2 output 위치 설정 (필요시 경로만 수정) ====
-    baseDir = "C:\Users\hsollim\Downloads\TRAP_region_clusters_by_phase_density_v2";
-    matPath = fullfile(baseDir, "TRAP_downstream_input.mat");
+    C = trap_config();
+    baseDir = C.v2_outDir;
+    matPath = C.downstream_mat;
 
     if ~isfile(matPath)
         error("Cannot find TRAP_downstream_input.mat at: %s\n먼저 v2 코드를 실행해서 .mat을 생성해야 합니다.", matPath);

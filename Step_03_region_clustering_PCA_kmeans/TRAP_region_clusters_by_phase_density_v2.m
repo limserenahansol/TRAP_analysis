@@ -34,12 +34,17 @@ function TRAP_region_clusters_by_phase_density_v2()
 % HS custom (depth 5/6/7 hierarchy + depth-4 label)
 
 %% ============== USER SETTINGS =====================
-csvPath        = "C:\Users\hsollim\Downloads\Hansol Lim density channel 561_all.csv";
-K              = 4;   % number of clusters
-N_per_cluster  = 15;  % representative regions per cluster
+C = trap_config();
+csvPath       = C.csvPath;
+outDir        = C.v2_outDir;
+K             = 4;   % number of clusters
+N_per_cluster = 15;  % representative regions per cluster
+if isfield(C, 'v2_kmeans_replicates')
+    kmRep = C.v2_kmeans_replicates;
+else
+    kmRep = 50;
+end
 
-[csvFolder, ~, ~] = fileparts(csvPath);
-outDir = fullfile(csvFolder, "TRAP_region_clusters_by_phase_density_v2");
 if ~exist(outDir,'dir'), mkdir(outDir); end
 
 fprintf("===== TRAP region clusters by phase (density) — v2 (depth 5/6/7 rule) =====\n");
@@ -308,7 +313,7 @@ for ph = phasesToUse
     % --- k-means clustering on z-scored data ---
     rng(0);   % reproducible
     clusterIdx = kmeans(Xz_valid, K, ...
-        'Replicates', 50, 'Distance','sqeuclidean');
+        'Replicates', kmRep, 'Distance','sqeuclidean');
 
     % --- silhouette for representative regions ---
     s = silhouette(Xz_valid, clusterIdx);

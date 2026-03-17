@@ -1,16 +1,24 @@
 # TRAP pipeline — roadmap & technical reference
 
-This document maps **all MATLAB files**, **data shape**, **workflow**, and **relationships** between scripts.
+**Run order:** see [`WORKFLOW.md`](WORKFLOW.md). Scripts live under `Step_01_…` … `Step_05_…` and `shared/`.
 
 ---
 
-## 1. Inventory of MATLAB files (22 × `.m`)
+## 1. Inventory of MATLAB files (by folder)
+
+### Step_01_BRANCH_global_stats
 
 | File | Role |
 |------|------|
 | **BRANCH_analysis_TRAP_density.m** | Early BRANCH-style pipeline: loads CSV, bilateral mean by base acronym, per-node ranksum (Active vs Passive), Kruskal–Wallis across phases, FDR via `mafdr`, tree plot, PCA/UMAP, dendrogram, paired sign-rank for 7597. Outputs to local `BRANCH_TRAP_OUTPUT` or similar. |
 | **run_BRANCH_TRAP_density.m** | Refined BRANCH on **L + global nodes**, L/R average, **local BH-FDR**, tree, PCA (depth 5–6), optional UMAP, Euclidean dendrogram, paired tests. Primary reference for “standard” BRANCH output next to CSV. |
-| **run_BRANCH_TRAP_density2.m** | Same core as above + **pretty tree** (`drawTreePlot_density_pretty`) for q_ActivePassive and q_time; typo risk: Reexposure uses `8060` in one branch (likely should be `8606`). |
+| **run_BRANCH_TRAP_density2.m** | Same + pretty tree plots. |
+| **trap_run_BRANCH_full.m** | Config + manifest + bootstrap CI + vectorized Cliff. |
+
+### Step_02_correlations_heatmaps
+
+| File | Role |
+|------|------|
 | **run_TRAP_condition_correlation_density.m** | Correlation heatmaps: mean vector per **phase** and per **Delivery×Phase** across depth 5–6 regions; saves `.mat` with `C_phase`, `C_combo`. |
 | **TRAP_condition_correlations.m** | Uses BRANCH `BRANCH_stats_density.csv` to subset regions (q thresholds), z-scores by region, builds **condition×condition** correlation + hierarchical clustering. |
 | **TRAP_condition_correlations3.m** | Variant of condition correlations (`buildSampleGroups`). |
@@ -18,6 +26,11 @@ This document maps **all MATLAB files**, **data shape**, **workflow**, and **rel
 | **TRAP_group_correlation_density.m** | Group-level correlation analysis on density. |
 | **TRAP_sample_correlation4.m** | Duplicate entry name: defines `TRAP_sample_correlation5` — sample-level correlation (verify which file you use). |
 | **TRAP_sample_correlation5.m** | Sample–sample correlation workflow. |
+
+### Step_03_region_clustering_PCA_kmeans
+
+| File | Role |
+|------|------|
 | **TRAP_region_clusters_by_phase_density.m** | **v1:** depth 5–6, k-means per phase (Withdrawal / Reinstatement), embedding, rep regions, density plots. |
 | **TRAP_region_clusters_by_phase_density_v2.m** | **Main clustering pipeline:** Allen depth **5/6/7 hierarchy** (prefer depth-7 non-“layer” children when present), `assign_groups_phase`, excludes some samples as `Exclude`, **K-means K=4**, UMAP or PCA, silhouette-based representatives, exports **`TRAP_downstream_input.mat`**. |
 | **TRAP_region_clusters_by_phase_density_top40.m** | Like v1 with **top-40** |Active−Passive| style emphasis. |
@@ -27,9 +40,25 @@ This document maps **all MATLAB files**, **data shape**, **workflow**, and **rel
 | **TRAP_region_scatter_byCluster_density_allforUMAP.m** | Phase plots aligned with UMAP/cluster logic. |
 | **TRAP_regionUMAP_clusterplots.m** | UMAP cluster visualization. |
 | **TRAP_topRegion_scatter_density.m** | Fig4-style scatter for top regions by phase. |
+| **trap_run_clustering_sweep.m** | K sweep, stability, sample PCA. |
+
+### Step_04_downstream_flip
+
+| File | Role |
+|------|------|
 | **TRAP_run_downstream.m** | Loads `TRAP_downstream_input.mat` from v2 folder, runs **flip-direction** analysis with **Top 50**. |
-| **TRAP_downstream_flip_direction.m** | Standalone flip-direction (older Top-N default); overlaps with logic inside `TRAP_run_downstream.m`. |
-| **TRAP_export_depth56_region_names.m** | Reads `TRAP_downstream_input.mat` → CSV of acronym + full name for depth 5–6 list. |
+| **TRAP_downstream_flip_direction.m** | Flip-direction helper (called by `TRAP_run_downstream`). |
+| **trap_run_flip_advanced.m** | Min |Δ|, permutation null. |
+
+### Step_05_utilities
+
+| File | Role |
+|------|------|
+| **TRAP_export_depth56_region_names.m** | `TRAP_downstream_input.mat` → acronym/fullname CSV. |
+
+### shared/
+
+| **trap_config.m** is at repo root. Helpers: `trap_sample_groups`, `trap_fdr`, `trap_cliff_delta_vec`, `trap_load_density_LR`. |
 
 ---
 
@@ -47,9 +76,7 @@ This document maps **all MATLAB files**, **data shape**, **workflow**, and **rel
 
 1. **Left/right:** Average **-L** and **-R** for the same base region → one value per structure (some scripts keep only left rows then merge R).
 2. **Depth:** Many analyses restrict to **depth 5–6** or **v2’s 5/6/7 rule** to avoid ~1700 raw rows and focus on interpretable regions.
-3. **Groups:**
-   - **Delivery:** Active vs Passive (filename heuristics).
-   - **Phase:** Withdrawal / Reinstatement / Reexposure / Unknown / Exclude (v2).
+3. **Groups (delivery / phase):** Defined in **`TRAP_sample_manifest.csv`** and documented in **`MOUSE_COHORT.txt`**. Update those when adding mice. Legacy scripts may still infer groups from column substrings if the manifest is not used.
 
 ### 2.3 Intermediate binary
 
@@ -117,8 +144,8 @@ flowchart TD
 
 ### 5.4 Engineering
 
-- **Single `trap_config.m`:** `csvPath`, `outRoot`, `K`, FDR q, phase regex table.
-- **Sample table:** `samples.csv` with columns `column_name`, `delivery`, `phase` — replace all `contains(nm, …)` logic.
+- **Single `trap_config.m`:** `csvPath`, `outRoot`, `K`, FDR q.
+- **Cohort:** `TRAP_sample_manifest.csv` + `MOUSE_COHORT.txt` — single place to update when adding mice.
 - **Deduplicate:** `BRANCH_analysis_TRAP_density.m` vs `run_BRANCH_TRAP_density.m`; merge `TRAP_downstream_flip_direction.m` with `TRAP_run_downstream.m` (one entry point).
 - **Fix:** `run_BRANCH_TRAP_density2.m` line with `8060` for Reexposure; align **Passive** rule (`black` only vs explicit animal IDs) across scripts.
 - **Performance:** Vectorized Cliff’s delta or use third-party `cliffdelta`; avoid O(n²) double loops for large samples.
@@ -136,6 +163,10 @@ flowchart TD
 ## 6. File dependency cheat sheet
 
 ```
+MOUSE_COHORT.txt  (human log)
+TRAP_sample_manifest.csv  (column_name → delivery, phase, include)
+ └── trap_run_BRANCH_full.m, trap_load_density_LR.m, …
+
 CSV
  ├── run_BRANCH_TRAP_density.m
  ├── run_TRAP_condition_correlation_density.m

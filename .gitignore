@@ -1,14 +1,18 @@
 # MATLAB autosave
 *.asv
 
-# Outputs (optional — remove lines if you want to version small examples)
+# Large / local data (keep manifest in repo)
+*.csv
+!TRAP_sample_manifest.csv
+Hansol Lim*.csv
+
+# Outputs
+TRAP_OUTPUT/
+TRAP_region_clusters_by_phase_density_v2/
 BRANCH_TRAP_OUTPUT/
-BRANCH_TRAP_OUTPUT_density/
-*_OUTPUT*/
 *.mat
 *.png
-*.csv
-!**/example_*.csv
+*.pdf
 
 # OS
 Thumbs.db
