@@ -1,0 +1,15 @@
+# MATLAB autosave
+*.asv
+
+# Outputs (optional — remove lines if you want to version small examples)
+BRANCH_TRAP_OUTPUT/
+BRANCH_TRAP_OUTPUT_density/
+*_OUTPUT*/
+*.mat
+*.png
+*.csv
+!**/example_*.csv
+
+# OS
+Thumbs.db
+Desktop.ini
