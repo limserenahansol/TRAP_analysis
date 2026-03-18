@@ -1,6 +1,10 @@
 function [densMean, Node, sampleNames, GroupDelivery, GroupPhase] = trap_load_pooled_density_LR(C)
 %TRAP_LOAD_POOLED_DENSITY_LR  Pool samples from multiple cohort CSVs (same atlas rows).
 %
+%   Bilateral: for "-L" atlas rows, each sample = (Left density + Right density)/2 (same as Step 1–2).
+%   Phase: **Reexposure** in manifest → stored as **Reinstatement** (trap_normalize_manifest_phase).
+%   Acronym still ends in -L; plotted labels strip -L via trap_region_base_name.
+%
 %   TRAP_sample_manifest.csv must list every sample column:
 %     cohort_id, column_name, delivery, phase, include, …
 %   cohort_id = 1 → first line of TRAP_cohort_CSVs.txt, 2 → second file, …
@@ -11,11 +15,7 @@ function [densMean, Node, sampleNames, GroupDelivery, GroupPhase] = trap_load_po
         error('Manifest required for multi-cohort: %s', C.manifestPath);
     end
 
-    opts = detectImportOptions(C.manifestPath, 'TextType', 'string');
-    M = readtable(C.manifestPath, opts);
-    if ~ismember('column_name', M.Properties.VariableNames)
-        error('Manifest needs column_name');
-    end
+    M = trap_read_manifest(C.manifestPath);
     if ~ismember('cohort_id', M.Properties.VariableNames)
         M.cohort_id = ones(height(M), 1);
     end
@@ -73,7 +73,7 @@ function [densMean, Node, sampleNames, GroupDelivery, GroupPhase] = trap_load_po
         D(:, k) = T{loc, jcol};
         sampleNames(k) = "C" + string(ci) + "__" + string(M.column_name(k));
         GroupDelivery(k) = string(strtrim(M.delivery(k)));
-        GroupPhase(k) = string(strtrim(M.phase(k)));
+        GroupPhase(k) = trap_normalize_manifest_phase(M.phase(k));
     end
 
     acrsFull = string(NodeFull.acronym);

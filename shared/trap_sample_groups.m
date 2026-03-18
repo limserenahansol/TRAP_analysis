@@ -12,11 +12,7 @@ function [GroupDelivery, GroupPhase, includeMask, fromManifest] = trap_sample_gr
     sampleNames = string(sampleNames(:));
 
     if C.useManifest && isfile(C.manifestPath)
-        opts = detectImportOptions(C.manifestPath, 'TextType', 'string');
-        M = readtable(C.manifestPath, opts);
-        if ~ismember('column_name', M.Properties.VariableNames)
-            error('Manifest must have column: column_name');
-        end
+        M = trap_read_manifest(C.manifestPath);
         if ~ismember('include', M.Properties.VariableNames)
             M.include = true(height(M), 1);
         end

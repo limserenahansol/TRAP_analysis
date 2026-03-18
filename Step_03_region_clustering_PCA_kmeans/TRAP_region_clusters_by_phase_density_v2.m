@@ -52,142 +52,140 @@ fprintf("Cohort CSVs (%d):\n", numel(paths));
 for ip = 1:numel(paths), fprintf("  %d: %s\n", ip, paths{ip}); end
 fprintf("Output dir: %s\n", outDir);
 
-%% 1–3. Pool cohorts (manifest) + L/R average (inside loader)
-[densAll, NodeLR, sampleNames, GroupDelivery, GroupPhase] = trap_load_pooled_density_LR(C);
-
-summaryTbl = table(sampleNames, GroupDelivery, GroupPhase, ...
-    'VariableNames', {'Sample','Delivery','Phase'});
-disp(summaryTbl);
-
-maskUseSample = GroupPhase ~= "Exclude";
-if ~all(maskUseSample)
-    fprintf("Dropping %d samples (Phase==Exclude):\n", nnz(~maskUseSample));
-    disp(summaryTbl(~maskUseSample, :));
+useAllCsv = isfield(C, 'v2_sample_source') && strcmpi(C.v2_sample_source, 'all_csv');
+if useAllCsv
+    if numel(paths) > 1
+        warning(['v2_sample_source=all_csv uses only the first cohort CSV. ' ...
+            'Use manifest to pool multiple cohorts.']);
+    end
+    fprintf('v2 samples: all_csv (every density column; legacy phase rules) — like original Downloads v2.m\n');
+    [densLR, NodeLR, sampleNames, GroupDelivery, GroupPhase, csvPath1] = ...
+        trap_load_v2_all_csv_samples(paths{1});
+    csvPath = csvPath1;
+    nSamples = size(densLR, 2);
+    summaryTbl = table(sampleNames, GroupDelivery, GroupPhase, ...
+        'VariableNames', {'Sample', 'Delivery', 'Phase'});
+    disp(summaryTbl);
+    fprintf('Using %d samples (Exclude dropped in loader).\n', nSamples);
+else
+    fprintf('v2 samples: manifest (TRAP_sample_manifest.csv, include=1)\n');
+    [densAll, NodeLR, sampleNames, GroupDelivery, GroupPhase] = trap_load_pooled_density_LR(C);
+    summaryTbl = table(sampleNames, GroupDelivery, GroupPhase, ...
+        'VariableNames', {'Sample', 'Delivery', 'Phase'});
+    disp(summaryTbl);
+    maskUseSample = GroupPhase ~= "Exclude";
+    if ~all(maskUseSample)
+        fprintf("Dropping %d samples (Phase==Exclude):\n", nnz(~maskUseSample));
+        disp(summaryTbl(~maskUseSample, :));
+    end
+    GroupDelivery = GroupDelivery(maskUseSample);
+    GroupPhase = GroupPhase(maskUseSample);
+    sampleNames = sampleNames(maskUseSample);
+    densLR = densAll(:, maskUseSample);
+    nSamples = size(densLR, 2);
+    fprintf("Using %d samples after Exclude filter.\n", nSamples);
+    csvPath = strjoin(paths, ' | ');
 end
-
-GroupDelivery = GroupDelivery(maskUseSample);
-GroupPhase    = GroupPhase(maskUseSample);
-sampleNames   = sampleNames(maskUseSample);
-densLR        = densAll(:, maskUseSample);
-nSamples      = size(densLR, 2);
-
-fprintf("Using %d samples after Exclude filter.\n", nSamples);
 
 acLR = string(NodeLR.acronym);
 acLR = erase(acLR, "-L");
 NodeLR.acronym = acLR;
 
-csvPath = strjoin(paths, ' | ');
-
-%% 3b. Depth 5/6/7 hierarchy rule + depth-4 parent label
+%% 3b. Depth rule for which regions enter v2 (config: C.v2_depth_rule)
 depthLR    = NodeLR.depth;
 idLR       = NodeLR.id;
 parentIdLR = NodeLR.parent_structure_id;
 nameLR     = string(NodeLR.name);
 
-isD5 = depthLR == 5;
-isD6 = depthLR == 6;
-isD7 = depthLR == 7;
+nRegions   = height(NodeLR);   % atlas rows (same as size(densLR,1))
 
-% depth-7 nodes that are "layer" (ignored for selection)
-isLayer7 = isD7 & contains(nameLR, "layer", 'IgnoreCase', true);
-
-% Build id -> row index map
-keyCell = num2cell(idLR);
-valCell = num2cell((1:nRegions).');
-id2row  = containers.Map(keyCell, valCell);
-
-% Flags on depth-5 nodes
-hasD6Child          = false(nRegions,1);  % depth-5 node has any depth-6 descendant
-hasD7NonLayerChild  = false(nRegions,1);  % depth-5 node has any non-layer depth-7 descendant
-
-% Traverse descendants: depth-6
-for j = 1:nRegions
-    if ~isD6(j), continue; end
-
-    ancId = parentIdLR(j);
-    while ancId ~= 0 && isKey(id2row, ancId)
-        r = id2row(ancId);
-        if depthLR(r) <= 5
-            if depthLR(r) == 5
-                hasD6Child(r) = true;
-            end
-            break;
-        else
-            ancId = parentIdLR(r);
-        end
-    end
-end
-
-% Traverse descendants: depth-7 (non-layer only)
-for j = 1:nRegions
-    if ~(isD7(j) && ~isLayer7(j)), continue; end
-
-    ancId = parentIdLR(j);
-    while ancId ~= 0 && isKey(id2row, ancId)
-        r = id2row(ancId);
-        if depthLR(r) <= 5
-            if depthLR(r) == 5
-                hasD7NonLayerChild(r) = true;
-            end
-            break;
-        else
-            ancId = parentIdLR(r);
-        end
-    end
-end
-
-% Final keep mask for depth 5/6/7
-keepMaskDepth = false(nRegions,1);
-
-for i = 1:nRegions
-    d = depthLR(i);
-
-    if d == 7
-        % keep only non-layer depth-7 nodes
-        if ~isLayer7(i)
-            keepMaskDepth(i) = true;
-        end
-
-    elseif d == 6
-        % keep this depth-6 node UNLESS its depth-5 ancestor has
-        % any non-layer depth-7 child (then we want only depth-7)
-        ancId = parentIdLR(i);
-        dropBecauseD7 = false;
-        while ancId ~= 0 && isKey(id2row, ancId)
-            r = id2row(ancId);
+if ~isfield(C, 'v2_depth_rule') || ~strcmpi(C.v2_depth_rule, 'hierarchy567')
+    keepMaskDepth = trap_depth_mask_depth56_fixed(parentIdLR, idLR, depthLR, nRegions);
+    depthRuleLabel = 'depth 5/6 fixed (d6 + d5 without direct d6 child)';
+else
+    % hierarchy567: depth-7 non-layer / d6 / d5 fallback
+    isD5 = depthLR == 5;
+    isD6 = depthLR == 6;
+    isD7 = depthLR == 7;
+    isLayer7 = isD7 & contains(nameLR, "layer", 'IgnoreCase', true);
+    keyCellH = num2cell(idLR);
+    valCellH = num2cell((1:nRegions).');
+    id2rowH  = containers.Map(keyCellH, valCellH);
+    hasD6Child = false(nRegions, 1);
+    hasD7NonLayerChild = false(nRegions, 1);
+    for j = 1:nRegions
+        if ~isD6(j), continue; end
+        ancId = parentIdLR(j);
+        while ancId ~= 0 && isKey(id2rowH, ancId)
+            r = id2rowH(ancId);
             if depthLR(r) <= 5
-                if depthLR(r) == 5 && hasD7NonLayerChild(r)
-                    dropBecauseD7 = true;
-                end
+                if depthLR(r) == 5, hasD6Child(r) = true; end
                 break;
             else
                 ancId = parentIdLR(r);
             end
         end
-        if ~dropBecauseD7
-            keepMaskDepth(i) = true;
-        end
-
-    elseif d == 5
-        % keep depth-5 only if it has NO depth-6 descendants
-        % and NO non-layer depth-7 descendants
-        if ~(hasD6Child(i) || hasD7NonLayerChild(i))
-            keepMaskDepth(i) = true;
-        end
-    else
-        % other depths (e.g. 4) are not part of NodeSel
-        keepMaskDepth(i) = false;
     end
+    for j = 1:nRegions
+        if ~(isD7(j) && ~isLayer7(j)), continue; end
+        ancId = parentIdLR(j);
+        while ancId ~= 0 && isKey(id2rowH, ancId)
+            r = id2rowH(ancId);
+            if depthLR(r) <= 5
+                if depthLR(r) == 5, hasD7NonLayerChild(r) = true; end
+                break;
+            else
+                ancId = parentIdLR(r);
+            end
+        end
+    end
+    keepMaskDepth = false(nRegions, 1);
+    for i = 1:nRegions
+        d = depthLR(i);
+        if d == 7 && ~isLayer7(i)
+            keepMaskDepth(i) = true;
+        elseif d == 6
+            ancId = parentIdLR(i);
+            dropBecauseD7 = false;
+            while ancId ~= 0 && isKey(id2rowH, ancId)
+                r = id2rowH(ancId);
+                if depthLR(r) <= 5
+                    if depthLR(r) == 5 && hasD7NonLayerChild(r)
+                        dropBecauseD7 = true;
+                    end
+                    break;
+                else
+                    ancId = parentIdLR(r);
+                end
+            end
+            if ~dropBecauseD7
+                keepMaskDepth(i) = true;
+            end
+        elseif d == 5 && ~(hasD6Child(i) || hasD7NonLayerChild(i))
+            keepMaskDepth(i) = true;
+        end
+    end
+    depthRuleLabel = 'depth 5/6/7 hierarchy';
 end
+
+keyCell = num2cell(idLR);
+valCell = num2cell((1:nRegions).');
+id2row  = containers.Map(keyCell, valCell);
 
 NodeSelIdx = find(keepMaskDepth);
 NodeSel    = NodeLR(keepMaskDepth,:);
 densLRSel  = densLR(keepMaskDepth,:);
 nRegionsSel = height(NodeSel);
 
-fprintf("Regions kept by depth rule (5/6/7 with hierarchy): %d / %d\n", ...
-    nRegionsSel, nRegions);
+fprintf('Regions kept (%s): %d / %d atlas rows (after L/R average)\n', ...
+    depthRuleLabel, nRegionsSel, nRegions);
+
+% Figure titles: original script said "depth rule fixed" while using 5/6/7 hierarchy
+if useAllCsv
+    plotDepthTitle = 'depth rule fixed';
+else
+    plotDepthTitle = depthRuleLabel;
+end
 
 % Also compute depth-4 parent acronym for each selected region
 parentD4 = strings(nRegionsSel,1);
@@ -214,11 +212,9 @@ NodeSel.parent_d4_acronym = parentD4;
 figDir = C.v2_figDir;
 if ~exist(figDir, 'dir'), mkdir(figDir); end
 trap_write_folder_readme(figDir, 'STEP 3 — Region clustering v2 (figures)', ...
-    sprintf(['Each region = one brain area (depth 5/6/7 rule). Each phase analyzed separately.\n' ...
-    'UMAP: install run_umap for nonlinear embedding; otherwise PCA (PCA is weak when very few mice in a phase).\n' ...
-    'Tables (RepRegions CSV, .mat) are in: %s\n'], outDir));
-
-kmOpts = statset('MaxIter', 500);
+    sprintf(['Each region = one brain area: %s. L/R hemispheres averaged per region (see trap_load_pooled_density_LR).\n' ...
+    'Each phase analyzed separately. UMAP: install run_umap; else PCA.\n' ...
+    'Tables (RepRegions CSV, .mat) are in: %s\n'], depthRuleLabel, outDir));
 
 %% 4. Phase-wise region clustering and plots
 phasesToUse = ["Withdrawal","Reinstatement"];
@@ -259,7 +255,7 @@ for ph = phasesToUse
     else
         fprintf('UMAP not found — using PCA for phase %s.\n', ph);
         warnPCA = warning('off', 'all');
-        [~, score, ~, ~, expl] = pca(Xz_valid, 'NumComponents', 2); %#ok<ASGLU>
+        [~, score, ~, ~, expl] = pca(Xz_valid); %#ok<ASGLU> same as original v2.m
         warning(warnPCA);
         PC1 = score(:, 1);
         if size(score, 2) >= 2
@@ -274,9 +270,10 @@ for ph = phasesToUse
     end
 
     % --- k-means clustering on z-scored data ---
-    rng(0);   % reproducible
+    rng(0);   % reproducible (same seed as original v2.m)
+    % No Options — matches original Downloads script (default k-means max iter)
     clusterIdx = kmeans(Xz_valid, K, ...
-        'Replicates', kmRep, 'Distance', 'sqeuclidean', 'Options', kmOpts);
+        'Replicates', kmRep, 'Distance', 'sqeuclidean');
 
     % --- silhouette for representative regions ---
     s = silhouette(Xz_valid, clusterIdx);
@@ -401,7 +398,7 @@ for ph = phasesToUse
 
     plot_region_density_with_clusters( ...
         X_phase, repAxisLabels, delivery_phase, repClusterID, colors, ...
-        sprintf('Region density (%s)', ph), ...
+        sprintf('Region density (%s, %s)', ph, plotDepthTitle), ...
         fullfile(figDir, sprintf('02_rep_regions_RAW_density_%s.png', ph)), ...
         sprintf(['Y = raw density (cells/mm^3). PHASE: %s only.\n' ...
         'X = representative regions (from k-means clusters on embedding).\n' ...
@@ -410,7 +407,7 @@ for ph = phasesToUse
 
     plot_region_density_with_clusters( ...
         Xz_phase, repAxisLabels, delivery_phase, repClusterID, colors, ...
-        sprintf('Z-scored density (%s)', ph), ...
+        sprintf('Region z-scored density (%s, %s)', ph, plotDepthTitle), ...
         fullfile(figDir, sprintf('03_rep_regions_ZSCORED_within_phase_%s.png', ph)), ...
         sprintf(['Y = z-score within this phase (mean 0, std 1 per region across mice). PHASE: %s.\n' ...
         'Same layout as 02 — compares Active vs Passive after removing phase-wide level shifts.\n'], ph));
@@ -425,6 +422,11 @@ downData.GroupPhase    = GroupPhase;     % sample labels
 downData.GroupDelivery = GroupDelivery;  % Active or Passive
 downData.sampleNames   = sampleNames;    % sample names
 downData.csvPath       = csvPath;
+downData.v2_depth_rule = C.v2_depth_rule;
+downData.depth_rule_description = depthRuleLabel;
+if isfield(C, 'v2_sample_source')
+    downData.v2_sample_source = C.v2_sample_source;
+end
 
 save(fullfile(outDir, "TRAP_downstream_input.mat"), "-struct", "downData");
 fprintf("Saved downstream input: %s\n", fullfile(outDir,"TRAP_downstream_input.mat"));

@@ -1,5 +1,5 @@
 function RUN_PIPELINE_ALL()
-%RUN_PIPELINE_ALL  Step 1 → 5 in one go (uses trap_config.runMode 'quick' or 'full').
+%RUN_PIPELINE_ALL  Steps 1–9. Canonical copy: Desktop\TRAP_pipeline (see README_CANONICAL.md).
 %
 %   >> cd TRAP_pipeline
 %   >> RUN_PIPELINE_ALL
@@ -29,10 +29,28 @@ function RUN_PIPELINE_ALL()
     fprintf('\n--- Step 5: export region names ---\n');
     TRAP_export_depth56_region_names;
 
+    fprintf('\n--- Step 6: phase-specific Active vs Passive (FDR trees) ---\n');
+    trap_run_phase_AP_contrasts;
+
+    fprintf('\n--- Step 6b: |Δ_Rein − Δ_With| phase-flip screening (CSV + plots) ---\n');
+    trap_run_phase_delta_screening;
+
+    fprintf('\n--- Step 7: directional scenarios → separate folders (01/02/03 each) ---\n');
+    trap_run_directional_AP_scenario_folders;
+
+    fprintf('\n--- Step 8: within-group Rein vs Withdrawal delta (Active / Passive) ---\n');
+    trap_run_phase_delta_within_group;
+
+    fprintf('\n--- Step 9: same as 6–8, forebrain only (excl. brainstem + cerebellum) ---\n');
+    trap_run_step9_forebrain_exclude_bs_cb;
+
     fprintf('\n========== DONE ==========\n');
     fprintf(['Outputs:\n  Tables + figures: %s (see figures_described/)\n' ...
         '  %s (figures_described/)\n  %s + RepRegions CSV + .mat\n' ...
-        '  %s (figures_described/)\n'], ...
-        C.BRANCH_dir, C.cluster_dir, C.v2_outDir, C.flip_dir);
+        '  %s (figures_described/)\n  %s (A vs P + phase_delta_screening)\n'], ...
+        C.BRANCH_dir, C.cluster_dir, C.v2_outDir, C.flip_dir, C.phase_AP_root);
+    fprintf('  Step 7: %s\n', fullfile(C.outRoot, '07_directional_AP_scenarios'));
+    fprintf('  Step 8: %s\n', fullfile(C.outRoot, '08_within_group_Rein_vs_Withdrawal_delta'));
+    fprintf('  Step 9: %s\n', fullfile(C.outRoot, '09_forebrain_no_brainstem_cerebellum'));
     fprintf('See WHEN_YOU_ADD_MICE_EN_KR.md and WARNINGS_EXPLAINED_EN_KR.md\n');
 end

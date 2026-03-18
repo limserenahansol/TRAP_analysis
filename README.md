@@ -2,9 +2,16 @@
 
 Analysis pipeline for **TRAP whole-brain imaging**: density (cells/mm³) per Allen region, **Active vs Passive**, and **phase**. BRANCH-style stats, PCA/UMAP, k-means, correlations, flip-direction analysis.
 
-**Run order:** [`WORKFLOW.md`](WORKFLOW.md) — step folders **1 → 5**.  
+### Methods & statistics (EN + KR) / 방법·통계 (영·한)
+
+**[`PIPELINE_DATA_STATISTICS_EN_KR.md`](PIPELINE_DATA_STATISTICS_EN_KR.md)** — schematic (Mermaid), **how data are processed**, **how groups are compared**, **which tests are used** (Steps 1–9).  
+**[`RUN_MATLAB_AND_GITHUB_EN_KR.md`](RUN_MATLAB_AND_GITHUB_EN_KR.md)** — **MATLAB 실행 방법** + **GitHub push** (English + Korean).  
+데이터 처리·통계 도식 / **실행·푸시 가이드**.
+
+**Run order:** [`WORKFLOW.md`](WORKFLOW.md) — step folders **1 → 5** (+ 6–9 in `RUN_PIPELINE_ALL`).  
 **Where code vs outputs live:** [`FOLDERS_GUIDE.md`](FOLDERS_GUIDE.md)  
 **Add cohorts / mice:** [`WHEN_YOU_ADD_MICE_EN_KR.md`](WHEN_YOU_ADD_MICE_EN_KR.md)  
+**Step 3 vs 6–9 alignment:** [`STEP_CONSISTENCY_3_vs_6_8.md`](STEP_CONSISTENCY_3_vs_6_8.md)  
 **Technical index:** [`PIPELINE_ROADMAP.md`](PIPELINE_ROADMAP.md)
 
 ---

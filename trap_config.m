@@ -28,6 +28,13 @@ function C = trap_config()
     C.v2_outDir     = fullfile(root, 'TRAP_OUTPUT', '03_region_clustering_v2');
     C.v2_figDir     = fullfile(C.v2_outDir, 'figures_described');
     C.downstream_mat = fullfile(C.v2_outDir, 'TRAP_downstream_input.mat');
+    % Step 3 v2 which regions enter clustering:
+    %   'hierarchy567'  — same as your original Downloads v2.m (depth 5/6/7 hierarchy)
+    %   'depth56_fixed' — depth 6 + depth-5 without direct depth-6 child (coarser)
+    C.v2_depth_rule = 'hierarchy567';
+    % v2 samples: 'manifest' = only manifest (matches Steps 6–9). 'all_csv' = extra CSV columns.
+    % For identical mice vs Step 6–9, use: v2_sample_source = 'manifest'
+    C.v2_sample_source = 'all_csv';
 
     %% --- BRANCH / stats ---
     C.fdrMethod     = 'BH';    % 'BH' (Benjamini–Hochberg) or 'BY' (Benjamini–Yekutieli, conservative under dependence)
@@ -45,6 +52,29 @@ function C = trap_config()
     C.flip_min_abs_delta = 0.5;   % min |raw Δ| (density) to count Rein/With Active–Passive difference; tune to your scale
     C.flip_n_perm        = 2000;  % permutation iterations (label shuffle within phase)
     C.flip_topN          = 50;
+
+    %% --- Step 6: phase-specific Active vs Passive ---
+    % **Wilcoxon rank-sum** (MATLAB ranksum) only — Steps 6–8. Raw p or FDR across regions.
+    C.phase_AP_root  = fullfile(C.outRoot, '06_phase_ActivePassive_FDR');
+    C.phase_AP_test  = 'ranksum';  % informational; trap_phase_AP_table always uses ranksum
+    C.phase_AP_use_fdr = false;  % true = require FDR q ≤ phase_AP_alpha; false = raw p ≤ phase_AP_p_raw
+    C.phase_AP_p_raw = 0.05;     % uncorrected p (two-sided Active vs Passive) when use_fdr=false
+    C.phase_AP_alpha = 0.05;     % FDR q threshold when phase_AP_use_fdr=true
+    C.phase_AP_barh_max = 45;
+    C.phase_AP_fourway_max = 35;
+    C.phase_AP_topN_direction_only = 25;  % bar plots: top N by mean separation, direction only (not req. sig)
+    % Steps 6–8: same brain-region set as Step 3 v2 (C.v2_depth_rule: hierarchy567 | depth56_fixed)
+    C.phase_AP_region_mask_step3 = true;
+    % Drop manifest samples with phase=Exclude before 6–8 (Step 3 manifest mode does this; Step 1 keeps them)
+    C.phase_AP_drop_exclude_samples = true;
+    % Step 6–8 bar plots: e.g. "B (brainstem)", "ACA (cerebrum)" via Allen parent walk
+    C.phase_AP_plot_major_class = true;
+    % true = same as Step 3 rep-region z: within each phase, z per region across mice
+    C.phase_AP_z_within_phase = true;
+    C.directional_AP_root = fullfile(C.outRoot, '07_directional_AP_scenarios');  % Step 7
+    C.phase_delta_within_group_root = fullfile(C.outRoot, '08_within_group_Rein_vs_Withdrawal_delta');
+    % Optional: function_handle @(d,N,c)trap_AP_filter_*(d,N,c) — Step 9 sets this
+    C.phase_AP_row_filter_fn = [];
 
     %% 'quick' = faster pipeline test; 'full' = bootstrap + more permutations
     C.runMode = 'full';
