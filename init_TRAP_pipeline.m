@@ -17,6 +17,7 @@ function init_TRAP_pipeline()
         'Step_03_region_clustering_PCA_kmeans'
         'Step_04_downstream_flip'
         'Step_05_utilities'
+        'Step_06_phase_AP_contrasts'
         };
     for k = 1:numel(steps)
         p = fullfile(here, steps{k});

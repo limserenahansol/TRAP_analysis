@@ -11,11 +11,7 @@ function [densMean, Node, sampleNames, GroupDelivery, GroupPhase] = trap_load_po
         error('Manifest required for multi-cohort: %s', C.manifestPath);
     end
 
-    opts = detectImportOptions(C.manifestPath, 'TextType', 'string');
-    M = readtable(C.manifestPath, opts);
-    if ~ismember('column_name', M.Properties.VariableNames)
-        error('Manifest needs column_name');
-    end
+    M = trap_read_manifest(C.manifestPath);
     if ~ismember('cohort_id', M.Properties.VariableNames)
         M.cohort_id = ones(height(M), 1);
     end

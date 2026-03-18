@@ -1,19 +1,11 @@
-# MATLAB autosave
-*.asv
-
-# Large / local data (keep manifest in repo)
-*.csv
-!TRAP_sample_manifest.csv
-Hansol Lim*.csv
-
-# Outputs
 TRAP_OUTPUT/
-TRAP_region_clusters_by_phase_density_v2/
+*.asv
 BRANCH_TRAP_OUTPUT/
-*.mat
-*.png
-*.pdf
-
-# OS
-Thumbs.db
-Desktop.ini
+TRAP_BRANCH/
+# Local density exports (use TRAP_cohort_CSVs.txt paths; do not commit large CSVs)
+*561_all.csv
+*channel*561*.csv
+Themousebrain*.pdf
+__pycache__/
+*.pyc
+trap_pipeline_py/TRAP_PYTHON_OUTPUT/

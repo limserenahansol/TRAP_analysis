@@ -1,8 +1,10 @@
 function RUN_PIPELINE_ALL()
-%RUN_PIPELINE_ALL  Step 1 → 5 in one go (uses trap_config.runMode 'quick' or 'full').
+%RUN_PIPELINE_ALL  Steps 1–7 (trap_config.runMode quick|full).
 %
-%   >> cd TRAP_pipeline
+%   >> cd trap_pipeline_matlab
 %   >> RUN_PIPELINE_ALL
+%
+%   Step 6 = per-region Active vs Passive (core). Step 7 = phase delta + exploratory cross-phase.
 
     here = fileparts(mfilename('fullpath'));
     cd(here);
@@ -12,12 +14,11 @@ function RUN_PIPELINE_ALL()
     pc = trap_read_cohort_paths(C);
     fprintf('\n========== TRAP pipeline | %d cohort CSV(s) | runMode=%s ==========\n', ...
         numel(pc), C.runMode);
-    fprintf('(Add lines to TRAP_cohort_CSVs.txt + manifest rows to pool more cohorts.)\n\n');
 
-    fprintf('--- Step 1: BRANCH (trap_run_BRANCH_full) ---\n');
+    fprintf('--- Step 1: BRANCH ---\n');
     trap_run_BRANCH_full;
 
-    fprintf('\n--- Step 2a: clustering sweep (silhouette / stability / sample PCA) ---\n');
+    fprintf('\n--- Step 2a: clustering sweep ---\n');
     trap_run_clustering_sweep;
 
     fprintf('\n--- Step 3: region clustering v2 ---\n');
@@ -29,10 +30,14 @@ function RUN_PIPELINE_ALL()
     fprintf('\n--- Step 5: export region names ---\n');
     TRAP_export_depth56_region_names;
 
+    fprintf('\n--- Step 6: regionwise Active vs Passive (CORE: each region, each phase) ---\n');
+    trap_run_step06_regionwise_Active_vs_Passive;
+
+    fprintf('\n--- Step 7: follow-up (phase delta + exploratory cross-phase folders) ---\n');
+    trap_run_step07_followup;
+
     fprintf('\n========== DONE ==========\n');
-    fprintf(['Outputs:\n  Tables + figures: %s (see figures_described/)\n' ...
-        '  %s (figures_described/)\n  %s + RepRegions CSV + .mat\n' ...
-        '  %s (figures_described/)\n'], ...
-        C.BRANCH_dir, C.cluster_dir, C.v2_outDir, C.flip_dir);
-    fprintf('See WHEN_YOU_ADD_MICE_EN_KR.md and WARNINGS_EXPLAINED_EN_KR.md\n');
+    fprintf('  Step 6 (core): %s\n', C.step06_regionwise_root);
+    fprintf('  Step 7:        %s\n', C.step07_root);
+    fprintf('  BRANCH: %s\n', C.BRANCH_dir);
 end

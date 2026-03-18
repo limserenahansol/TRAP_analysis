@@ -26,6 +26,7 @@ function trap_run_BRANCH_full()
 
     [densMean, Node, sampleNames, GroupA, GroupB] = trap_load_pooled_density_LR(C);
     nSamples = numel(sampleNames);
+    nRegions = size(densMean, 1);
     fprintf('Pooled %d samples (manifest include=1).\n', nSamples);
 
     maskActive = (GroupA == "Active");

@@ -1,51 +1,55 @@
-# TRAP_analysis — Whole-brain TRAP density pipeline (MATLAB)
+# TRAP_analysis — Whole-brain TRAP density pipeline (MATLAB + Python)
 
-Analysis pipeline for **TRAP whole-brain imaging**: density (cells/mm³) per Allen region, **Active vs Passive**, and **phase**. BRANCH-style stats, PCA/UMAP, k-means, correlations, flip-direction analysis.
+Analysis pipeline for **TRAP whole-brain imaging**: density (cells/mm³) per Allen region, **Active vs Passive**, and **phase**. BRANCH-style stats, clustering, flip-direction analysis, **per-region statistics (Step 6)**, and follow-ups (Step 7).
 
-**Run order:** [`WORKFLOW.md`](WORKFLOW.md) — step folders **1 → 5**.  
+| Component | Location |
+|-----------|----------|
+| **MATLAB** (Steps 1–7) | This repo root — `RUN_PIPELINE_ALL.m` |
+| **Python** (Steps 1–7) | **`trap_pipeline_py/`** — `python run_pipeline.py --csv … --manifest …` |
+
+**Run order (MATLAB):** [`WORKFLOW.md`](WORKFLOW.md) Steps 1–5 + **Step 6–7** via `RUN_PIPELINE_ALL.m` (or run Step 6/7 scripts individually).  
+**Core question (Step 6):** For **each** brain region, do Active and Passive differ in TRAP density **within Reinstatement** and **within Withdrawal**? Default test: **Wilcoxon rank-sum** (`trap_config.m` → `phase_AP_test = 'ranksum'`).  
+**Step 7:** Phase-delta screening + exploratory cross-phase folders (see `trap_pipeline_matlab/README.md` logic in root `README` section below).
+
 **Where code vs outputs live:** [`FOLDERS_GUIDE.md`](FOLDERS_GUIDE.md)  
-**Add cohorts / mice:** [`WHEN_YOU_ADD_MICE_EN_KR.md`](WHEN_YOU_ADD_MICE_EN_KR.md)  
-**Technical index:** [`PIPELINE_ROADMAP.md`](PIPELINE_ROADMAP.md)
+**Add cohorts / mice:** [`WHEN_YOU_ADD_MICE_EN_KR.md`](WHEN_YOU_ADD_MICE_EN_KR.md)
 
 ---
 
-## Before you run
+## Before you run (MATLAB)
 
-1. **`init_TRAP_pipeline`** once per MATLAB session (adds all step folders + `shared/` to path).
-2. Edit **`trap_config.m`** (fallback `csvPath`, outputs).
-3. **`TRAP_cohort_CSVs.txt`** — one density CSV per line (cohort 1, 2, …). Same format for every file; atlas **`id`**s must match across files.
-4. **`TRAP_sample_manifest.csv`** — each sample: **`cohort_id`** (line index), **`column_name`**, delivery, phase, include.
-5. **`MOUSE_COHORT.txt`** — optional notes.
+1. **`init_TRAP_pipeline`** once per MATLAB session.
+2. **`trap_config.m`** — paths, `phase_AP_test` (`ranksum` | `welch`), FDR vs raw p.
+3. **`TRAP_cohort_CSVs.txt`** — one density CSV per line.
+4. **`TRAP_sample_manifest.csv`** — column_name, delivery, phase, include.
+
+## Python pipeline
+
+```bash
+cd trap_pipeline_py
+pip install -r requirements.txt
+python run_pipeline.py --csv /path/to/density.csv --manifest /path/to/TRAP_sample_manifest.csv --out TRAP_PYTHON_OUTPUT
+```
+
+See **`trap_pipeline_py/README.md`**.
 
 ---
 
-## Folder layout (workflow order)
+## Folder layout (MATLAB)
 
 | Folder | Step |
 |--------|------|
-| **`shared/`** | Helpers (`trap_sample_groups`, `trap_fdr`, …) — not a “run step” |
-| **`Step_01_BRANCH_global_stats`** | Whole-brain BRANCH stats, PCA, tree |
-| **`Step_02_correlations_heatmaps`** | Optional: condition / sample correlations |
-| **`Step_03_region_clustering_PCA_kmeans`** | **Run `TRAP_region_clusters_by_phase_density_v2`** → produces `TRAP_downstream_input.mat` |
-| **`Step_04_downstream_flip`** | Flip-direction analysis (after Step 3) |
-| **`Step_05_utilities`** | e.g. export region name list |
+| **`shared/`** | Helpers |
+| **`Step_01_…` – `Step_05_…`** | BRANCH, correlations, clustering, flip, utilities |
+| **`Step_06_phase_AP_contrasts/`** | Regionwise Active vs Passive + Step 7 helpers |
+| **`trap_pipeline_py/`** | Python mirror (optional) |
 
-Root: **`trap_config.m`**, **`init_TRAP_pipeline.m`**, manifest, cohort text, input CSV.
-
-**Generated outputs (`TRAP_OUTPUT/`):**  
-`01_BRANCH_tables_and_figures/figures_described/` · `02_clustering_sweep/figures_described/` · `03_region_clustering_v2/figures_described/` · `04_flip_downstream/figures_described/` — each PNG has a **same-name `.txt`** explaining comparisons & methods.  
-See **`WHEN_YOU_ADD_MICE_EN_KR.md`**, **`WARNINGS_EXPLAINED_EN_KR.md`**.
+**Outputs:** `TRAP_OUTPUT/06_regionwise_Active_vs_Passive/`, `TRAP_OUTPUT/07_followup/`, etc.
 
 ---
 
 ## Requirements
 
 - MATLAB (Statistics Toolbox)
+- Python 3.10+ recommended for `trap_pipeline_py` (see `trap_pipeline_py/requirements.txt`)
 - Optional: UMAP (`run_umap`)
-- Optional: Bioinformatics Toolbox — `BRANCH_analysis_TRAP_density.m` only (`mafdr`)
-
----
-
-## License
-
-Add a `LICENSE` file if you want open reuse.

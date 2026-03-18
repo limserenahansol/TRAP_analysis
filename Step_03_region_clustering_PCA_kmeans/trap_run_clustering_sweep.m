@@ -15,7 +15,9 @@ function trap_run_clustering_sweep()
         sprintf(['Silhouette vs K, stability matrices, sample PCA per phase.\n' ...
         'Depth %d–%d regions; samples from manifest (include=1).\n'], C.pca_depth_min, C.pca_depth_max));
     rng(C.rng_seed);
-    kmOpts = statset('MaxIter', 500);
+    % High-dimensional region vectors + many replicates → raise MaxIter to avoid
+    % "Failed to converge in 500 iterations" (solution is still valid, just noisy).
+    kmOpts = statset('MaxIter', 5000, 'Display', 'off');
 
     [densMean, Node, sampleNames, ~, GroupPhase] = trap_load_density_LR(C);
     depth = Node.depth;

@@ -1,0 +1,21 @@
+TRAP density CSV — required input
+================================
+
+RUN_PIPELINE_ALL needs at least one TRAP export CSV (Allen atlas columns + one
+column per mouse: "... density (cells/mm^3)").
+
+How to connect your file
+------------------------
+
+A) Put the CSV inside this folder (TRAP_pipeline) and list its filename in
+   TRAP_cohort_CSVs.txt (one line, no #).
+
+B) Or keep the CSV anywhere on disk: open TRAP_cohort_CSVs.txt and replace the
+   line with the FULL path to your file, for example:
+   D:\Projects\TRAP\Hansol Lim density channel 561_all.csv
+
+C) If you do not use TRAP_cohort_CSVs.txt: delete or rename it, then set
+   C.csvPath in trap_config.m to the full path of your CSV.
+
+TRAP_sample_manifest.csv must list every sample column you want (column_name
+must match the CSV header text exactly).
