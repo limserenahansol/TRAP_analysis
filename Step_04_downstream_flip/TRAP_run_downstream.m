@@ -46,11 +46,10 @@ else
     parentD4 = repmat("", height(NodeSel), 1);
 end
 
-% build axis label: "Acronym (ParentD4)"
 regionBase = string(NodeSel.acronym);
-regionLabel = regionBase;
-maskHasParent = parentD4 ~= "";
-regionLabel(maskHasParent) = regionBase(maskHasParent) + " (" + parentD4(maskHasParent) + ")";
+Ccfg = trap_config();
+regionLabel = string(trap_region_plot_tick_labels( ...
+    double(NodeSel.id), NodeSel.acronym, Ccfg));
 
 %% ---------------------------------------------------------
 % 1. Phase split
@@ -206,7 +205,8 @@ for rr = 1:nR
 end
 
 xticks(1:nR);
-xticklabels(regionLabels(idxTop));   % <-- depth-4 label applied here!
+xticklabels(regionLabels(idxTop));
+set(gca, 'TickLabelInterpreter', 'none');
 xtickangle(60);
 
 ylabel('Density or z-score');

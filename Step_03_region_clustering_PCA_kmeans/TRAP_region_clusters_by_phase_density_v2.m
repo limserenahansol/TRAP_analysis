@@ -335,13 +335,15 @@ for ph = phasesToUse
         scatter(PC1(idxC), PC2(idxC), 20, colors(k,:), 'filled');
     end
 
-    % label representative regions only (acronym only, no parent here)
+    % Representative region labels (acronym + major class when configured)
+    repEmbLabs = trap_region_plot_tick_labels( ...
+        double(NodeSel.id(repGlobalIdx)), NodeSel.acronym(repGlobalIdx), C);
     for ii = 1:numel(repGlobalIdx)
         gIdx = repGlobalIdx(ii);
         localIdx = find(validIdxAll == gIdx);
         if isempty(localIdx), continue; end
         text(PC1(localIdx), PC2(localIdx), ...
-            [' ' char(NodeSel.acronym(gIdx))], ...
+            [' ' repEmbLabs{ii}], ...
             'FontSize',7, 'Color','k');
     end
 
@@ -383,12 +385,9 @@ for ph = phasesToUse
     repRegionNames = repRegionNames(ordC);
     repClusterID   = repClusterID(ordC);
 
-    % Build axis labels with depth-4 parent: "SNr (MBmot)"
-    parentForRep = NodeSel.parent_d4_acronym(repGlobalIdx);
-    repAxisLabels = repRegionNames;
-    maskHasParent = parentForRep ~= "";
-    repAxisLabels(maskHasParent) = repAxisLabels(maskHasParent) + ...
-        " (" + parentForRep(maskHasParent) + ")";
+    % Axis labels: acronym + major anatomical class (same as Step 6–8 when phase_AP_plot_major_class)
+    repAxisLabels = trap_region_plot_tick_labels( ...
+        double(NodeSel.id(repGlobalIdx)), NodeSel.acronym(repGlobalIdx), C);
 
     % matrix: repRegions x samplesPhase
     X_phase  = densLRSel(repGlobalIdx, idxPhase);    % raw density
@@ -514,6 +513,7 @@ end
 xlim([0.5 nRegions+0.5]);
 xticks(1:nRegions);
 xticklabels(regionNames);
+set(gca, 'TickLabelInterpreter', 'none');
 xtickangle(60);
 ylabel('Density (cells/mm^3) or z-score');
 title(titleStr, 'FontWeight','bold');

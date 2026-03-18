@@ -374,8 +374,13 @@ else
     colorbar;
 end
 
-% 4) 가장 유의한 노드 maxLabels 개에 라벨 달기
+% 4) 가장 유의한 노드 maxLabels 개에 라벨 달기 (acronym + major class when trap_config)
 if any(sigMask)
+    try
+        Ctree = trap_config();
+    catch
+        Ctree = struct('phase_AP_plot_major_class', false);
+    end
     qSig = q;
     qSig(~sigMask) = Inf;           % 비유의한 값은 제일 뒤로
     [~, idxSort] = sort(qSig, 'ascend');  % 작은 q부터
@@ -383,7 +388,8 @@ if any(sigMask)
     for k = 1:nLab
         i = idxSort(k);
         if ~sigMask(i), continue; end
-        text(i+0.5, -depth(i), char(acNode(i)), ...
+        lab1 = trap_region_plot_tick_labels(double(id(i)), acNode(i), Ctree);
+        text(i+0.5, -depth(i), lab1{1}, ...
             'FontSize', 7, 'Rotation', 45, ...
             'HorizontalAlignment','left', ...
             'VerticalAlignment','bottom');

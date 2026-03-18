@@ -31,9 +31,8 @@ function trap_run_flip_advanced()
         parentD4 = repmat("", height(NodeSel), 1);
     end
     regionBase = string(NodeSel.acronym);
-    regionLabel = regionBase;
-    maskP = parentD4 ~= "";
-    regionLabel(maskP) = regionBase(maskP) + " (" + parentD4(maskP) + ")";
+    regionLabel = string(trap_region_plot_tick_labels( ...
+        double(NodeSel.id), NodeSel.acronym, C));
 
     idxRein = GroupPhase == "Reinstatement";
     idxWith = GroupPhase == "Withdrawal";
@@ -170,6 +169,7 @@ function make_flip_plot(idxTop, X_rein, X_with, delRein, delWith, regionLabels, 
     end
     xticks(1:nR);
     xticklabels(regionLabels(idxTop));
+    set(gca, 'TickLabelInterpreter', 'none');
     xtickangle(60);
     ylabel('Density');
     title(ttl);

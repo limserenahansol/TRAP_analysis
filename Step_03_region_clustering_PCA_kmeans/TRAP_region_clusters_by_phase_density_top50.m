@@ -42,6 +42,7 @@ TOP_N         = 50;   % Top-N by |Active - Passive|
 [csvFolder, ~, ~] = fileparts(csvPath);
 outDir = fullfile(csvFolder, "TRAP_region_clusters_by_phase_density");
 if ~exist(outDir,'dir'), mkdir(outDir); end
+C = trap_config();
 
 fprintf("===== SAMPLE CORRELATION ANALYSIS (by phase, region clusters + Top%d) =====\n", TOP_N);
 fprintf("Input CSV : %s\n", csvPath);
@@ -393,11 +394,8 @@ for ph = phasesToUse
             repRegionNames      = repRegionNames(sortOrder);
 
             % axis labels with parent depth-4: "SNr (MBmot)"
-            parentForRep   = NodeSel.parent_d4_acronym(repRegionIdx_global);
-            repAxisLabels  = repRegionNames;
-            maskHasParent  = parentForRep ~= "";
-            repAxisLabels(maskHasParent) = repAxisLabels(maskHasParent) + ...
-                " (" + parentForRep(maskHasParent) + ")";
+            repAxisLabels = trap_region_plot_tick_labels( ...
+                double(NodeSel.id(repRegionIdx_global)), NodeSel.acronym(repRegionIdx_global), C);
 
             X_phase  = densLRSel(repRegionIdx_global, idxPhase);   % raw
             Xz_phase = zscore(X_phase, 0, 2);                      % within phase
@@ -450,15 +448,11 @@ for ph = phasesToUse
     topRegionNames = regionNamesBase_all(topRegionIdx);
     topParents     = NodeSel.parent_d4_acronym(topRegionIdx);
 
-    % label with parent: "BLA (Amyg)" etc
-    baseLabel = topRegionNames;
-    hasPar = topParents ~= "";
-    baseLabel(hasPar) = baseLabel(hasPar) + " (" + topParents(hasPar) + ")";
-
+    majTop = trap_region_plot_tick_labels(double(NodeSel.id(topRegionIdx)), NodeSel.acronym(topRegionIdx), C);
     rankNum = (1:nTop)';
     topRegionLabels = strings(nTop,1);
     for ii = 1:nTop
-        topRegionLabels(ii) = sprintf('%02d-%s', rankNum(ii), baseLabel(ii));
+        topRegionLabels(ii) = sprintf('%02d-%s', rankNum(ii), majTop{ii});
     end
 
     X_top  = X_allRegions_phase(topRegionIdx, :);
@@ -499,14 +493,11 @@ for ph = phasesToUse
         posNames   = regionNamesBase_all(posTopIdx);
         posParents = NodeSel.parent_d4_acronym(posTopIdx);
 
-        posBaseLabel = posNames;
-        hasParPos = posParents ~= "";
-        posBaseLabel(hasParPos) = posBaseLabel(hasParPos) + " (" + posParents(hasParPos) + ")";
-
+        majPos = trap_region_plot_tick_labels(double(NodeSel.id(posTopIdx)), NodeSel.acronym(posTopIdx), C);
         rankPos = (1:nPos)';
         posLabels = strings(nPos,1);
         for ii = 1:nPos
-            posLabels(ii) = sprintf('%02d-%s', rankPos(ii), posBaseLabel(ii));
+            posLabels(ii) = sprintf('%02d-%s', rankPos(ii), majPos{ii});
         end
 
         X_pos  = X_allRegions_phase(posTopIdx,:);
@@ -545,14 +536,11 @@ for ph = phasesToUse
         negNames   = regionNamesBase_all(negTopIdx);
         negParents = NodeSel.parent_d4_acronym(negTopIdx);
 
-        negBaseLabel = negNames;
-        hasParNeg = negParents ~= "";
-        negBaseLabel(hasParNeg) = negBaseLabel(hasParNeg) + " (" + negParents(hasParNeg) + ")";
-
+        majNeg = trap_region_plot_tick_labels(double(NodeSel.id(negTopIdx)), NodeSel.acronym(negTopIdx), C);
         rankNeg = (1:nNeg)';
         negLabels = strings(nNeg,1);
         for ii = 1:nNeg
-            negLabels(ii) = sprintf('%02d-%s', rankNeg(ii), negBaseLabel(ii));
+            negLabels(ii) = sprintf('%02d-%s', rankNeg(ii), majNeg{ii});
         end
 
         X_neg  = X_allRegions_phase(negTopIdx,:);
