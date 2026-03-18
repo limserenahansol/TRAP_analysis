@@ -1,0 +1,3 @@
+TRAP_PYTHON_OUTPUT/
+__pycache__/
+*.pyc
