@@ -83,6 +83,9 @@ function C = trap_config()
     C.phase5_baseline_phase = "Baseline";
     C.phase5_topN_heatmap = 50;
     C.phase5_topN_lineplot = 12;
+    C.phase5_topN_questions = 25;
+    C.phase5_run_forebrain_duplicate = true;
+    C.phase5_timeline_forebrain_root = fullfile(C.outRoot, '11_five_phase_timeline_forebrain_gray');
 
     %% 'quick' = faster pipeline test; 'full' = bootstrap + more permutations
     C.runMode = 'full';
