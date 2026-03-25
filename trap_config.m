@@ -63,11 +63,11 @@ function C = trap_config()
     C.phase_AP_barh_max = 45;
     C.phase_AP_fourway_max = 35;
     C.phase_AP_topN_direction_only = 25;  % bar plots: top N by mean separation, direction only (not req. sig)
-    % Steps 6–8: same brain-region set as Step 3 v2 (C.v2_depth_rule: hierarchy567 | depth56_fixed)
+    % Steps 6–9: same brain-region set as Step 3 v2 (C.v2_depth_rule: hierarchy567 | depth56_fixed)
     C.phase_AP_region_mask_step3 = true;
-    % Drop manifest samples with phase=Exclude before 6–8 (Step 3 manifest mode does this; Step 1 keeps them)
+    % Drop manifest samples with phase=Exclude before 6–9 (Step 3 manifest mode does this; Step 1 keeps them)
     C.phase_AP_drop_exclude_samples = true;
-    % Step 6–8 bar plots: e.g. "B (brainstem)", "ACA (cerebrum)" via Allen parent walk
+    % Step 6–9 bar plots: e.g. "B (brainstem)", "ACA (cerebrum)" via Allen parent walk
     C.phase_AP_plot_major_class = true;
     % true = same as Step 3 rep-region z: within each phase, z per region across mice
     C.phase_AP_z_within_phase = true;
@@ -75,6 +75,14 @@ function C = trap_config()
     C.phase_delta_within_group_root = fullfile(C.outRoot, '08_within_group_Rein_vs_Withdrawal_delta');
     % Optional: function_handle @(d,N,c)trap_AP_filter_*(d,N,c) — Step 9 sets this
     C.phase_AP_row_filter_fn = [];
+
+    %% --- Step 10: five-phase timeline (Baseline → … → Reinstatement) ---
+    % Requires manifest phases that normalize to C.phase5_phases (see trap_normalize_manifest_phase).
+    C.phase5_timeline_root = fullfile(C.outRoot, '10_five_phase_timeline');
+    C.phase5_phases = ["Baseline", "During", "Post", "Withdrawal", "Reinstatement"];
+    C.phase5_baseline_phase = "Baseline";
+    C.phase5_topN_heatmap = 50;
+    C.phase5_topN_lineplot = 12;
 
     %% 'quick' = faster pipeline test; 'full' = bootstrap + more permutations
     C.runMode = 'full';

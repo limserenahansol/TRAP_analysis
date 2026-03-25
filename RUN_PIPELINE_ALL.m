@@ -1,8 +1,11 @@
 function RUN_PIPELINE_ALL()
-%RUN_PIPELINE_ALL  Steps 1–9. Canonical copy: Desktop\TRAP_pipeline (see README_CANONICAL.md).
+%RUN_PIPELINE_ALL  Steps 1–10. Canonical copy: Desktop\TRAP_pipeline (see README_CANONICAL.md).
 %
 %   >> cd TRAP_pipeline
 %   >> RUN_PIPELINE_ALL
+%
+%   Step 10 = five-phase timeline (trap_run_phase5_timeline_analysis); needs manifest phases
+%   Baseline…Reinstatement (see STEP10_NEW_DATA_FIVE_PHASE_WORKFLOW.md).
 
     here = fileparts(mfilename('fullpath'));
     cd(here);
@@ -44,6 +47,9 @@ function RUN_PIPELINE_ALL()
     fprintf('\n--- Step 9: same as 6–8, forebrain only (excl. brainstem + cerebellum) ---\n');
     trap_run_step9_forebrain_exclude_bs_cb;
 
+    fprintf('\n--- Step 10: five-phase timeline (within-group + Active vs Passive per phase) ---\n');
+    trap_run_phase5_timeline_analysis;
+
     fprintf('\n========== DONE ==========\n');
     fprintf(['Outputs:\n  Tables + figures: %s (see figures_described/)\n' ...
         '  %s (figures_described/)\n  %s + RepRegions CSV + .mat\n' ...
@@ -52,5 +58,6 @@ function RUN_PIPELINE_ALL()
     fprintf('  Step 7: %s\n', fullfile(C.outRoot, '07_directional_AP_scenarios'));
     fprintf('  Step 8: %s\n', fullfile(C.outRoot, '08_within_group_Rein_vs_Withdrawal_delta'));
     fprintf('  Step 9: %s\n', fullfile(C.outRoot, '09_forebrain_no_brainstem_cerebellum'));
+    fprintf('  Step 10: %s\n', C.phase5_timeline_root);
     fprintf('See WHEN_YOU_ADD_MICE_EN_KR.md and WARNINGS_EXPLAINED_EN_KR.md\n');
 end

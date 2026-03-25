@@ -22,6 +22,8 @@ RUN_PIPELINE_ALL
 
 All steps (BRANCH, clustering, v2, flip) use **pooled** mice from every listed cohort.
 
+**Five-phase timeline (Baseline → Reinstatement) after a new CSV:** set `phase` in the manifest for every timepoint, then see **`STEP10_NEW_DATA_FIVE_PHASE_WORKFLOW.md`** (Step 10 = `trap_run_phase5_timeline_analysis`, included in `RUN_PIPELINE_ALL`).
+
 ---
 
 ## 한국어
@@ -39,3 +41,5 @@ All steps (BRANCH, clustering, v2, flip) use **pooled** mice from every listed c
 4. MATLAB에서 **`init_TRAP_pipeline`** → **`RUN_PIPELINE_ALL`** 그대로 실행.
 
 분석은 나열된 모든 CSV에서 **쥐를 합쳐서** 진행됩니다.
+
+**5단계 타임라인( Baseline → Reinstatement ) 새 CSV:** 매니페스트에 각 시점의 `phase`를 맞춘 뒤 **`STEP10_NEW_DATA_FIVE_PHASE_WORKFLOW.md`** 참고 (Step 10 = `trap_run_phase5_timeline_analysis`, `RUN_PIPELINE_ALL`에 포함).

@@ -8,7 +8,9 @@ Analysis pipeline for **TRAP whole-brain imaging**: density (cells/mm³) per All
 **[`RUN_MATLAB_AND_GITHUB_EN_KR.md`](RUN_MATLAB_AND_GITHUB_EN_KR.md)** — **MATLAB 실행 방법** + **GitHub push** (English + Korean).  
 데이터 처리·통계 도식 / **실행·푸시 가이드**.
 
-**Run order:** [`WORKFLOW.md`](WORKFLOW.md) — step folders **1 → 5** (+ 6–9 in `RUN_PIPELINE_ALL`).  
+**Step 10 (five-phase timeline, new CSV + manifest):** [`STEP10_NEW_DATA_FIVE_PHASE_WORKFLOW.md`](STEP10_NEW_DATA_FIVE_PHASE_WORKFLOW.md) — `trap_run_phase5_timeline_analysis` (runs automatically after Step 9 in **`RUN_PIPELINE_ALL`**).
+
+**Run order:** [`WORKFLOW.md`](WORKFLOW.md) — step folders **1 → 5** (+ 6–10 in `RUN_PIPELINE_ALL`).  
 **Where code vs outputs live:** [`FOLDERS_GUIDE.md`](FOLDERS_GUIDE.md)  
 **Add cohorts / mice:** [`WHEN_YOU_ADD_MICE_EN_KR.md`](WHEN_YOU_ADD_MICE_EN_KR.md)  
 **Step 3 vs 6–9 alignment:** [`STEP_CONSISTENCY_3_vs_6_8.md`](STEP_CONSISTENCY_3_vs_6_8.md)  
@@ -41,6 +43,7 @@ Root: **`trap_config.m`**, **`init_TRAP_pipeline.m`**, manifest, cohort text, in
 
 **Generated outputs (`TRAP_OUTPUT/`):**  
 `01_BRANCH_tables_and_figures/figures_described/` · `02_clustering_sweep/figures_described/` · `03_region_clustering_v2/figures_described/` · `04_flip_downstream/figures_described/` — each PNG has a **same-name `.txt`** explaining comparisons & methods.  
+Steps 6–9 and **10** (`10_five_phase_timeline/`) — see **`WORKFLOW.md`** and **`STEP10_NEW_DATA_FIVE_PHASE_WORKFLOW.md`**.  
 See **`WHEN_YOU_ADD_MICE_EN_KR.md`**, **`WARNINGS_EXPLAINED_EN_KR.md`**.
 
 ---
