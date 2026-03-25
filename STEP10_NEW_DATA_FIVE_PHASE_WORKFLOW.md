@@ -38,7 +38,7 @@ Step 10 expects **`trap_config.m` → `phase5_phases`** (default: the five names
 cd('C:\path\to\TRAP_analysis');   % repo root: init_TRAP_pipeline.m lives here
 init_TRAP_pipeline
 
-% Full pipeline (Steps 1–7 + Step 10):
+% Full pipeline (Steps 1–10):
 RUN_PIPELINE_ALL
 
 % Or Step 10 only (after paths and manifest are correct):
