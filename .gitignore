@@ -9,3 +9,4 @@ Themousebrain*.pdf
 __pycache__/
 *.pyc
 trap_pipeline_py/TRAP_PYTHON_OUTPUT/
+examples/step10_toy/generated/

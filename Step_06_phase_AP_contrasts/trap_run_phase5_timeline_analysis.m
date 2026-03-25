@@ -134,14 +134,18 @@ function phase5_run_one_root(C)
 
         dcol = deltaMat(:, peakJ);
         [Ttop, topIdx] = phase5_topn_table_within(Node, meanMat, phases, ib, peakJ, dcol, nQ);
-        writetable(Ttop, fullfile(tdir, sprintf('top%d_regions_at_peak_phase_%s_%s.csv', nQ, peakPh, dName)));
+        if height(Ttop) >= 1
+            writetable(Ttop, fullfile(tdir, sprintf('top%d_regions_at_peak_phase_%s_%s.csv', nQ, peakPh, dName)));
+        end
         ylab = ternary_str(useZ, 'Δ vs baseline (z within-phase)', 'Δ vs baseline (cells/mm³)');
-        phase5_barh_region_delta(Ttop, sprintf( ...
-            'Top %d |Δ vs baseline| — %s — peak phase %s', nQ, dName, peakPh), ...
-            fullfile(fdir, sprintf('05_top%d_barh_delta_peak_%s_%s.png', nQ, peakPh, dName)), ylab);
-        phase5_tree_delta_vs_baseline(Node, dcol, topIdx, sprintf( ...
-            '%s | peak phase %s | top %d by |Δ vs baseline|', dName, peakPh, nQ), ...
-            fullfile(fdir, sprintf('06_tree_top%d_delta_peak_%s_%s.png', nQ, peakPh, dName)));
+        if height(Ttop) >= 1
+            phase5_barh_region_delta(Ttop, sprintf( ...
+                'Top %d |Δ vs baseline| — %s — peak phase %s', nQ, dName, peakPh), ...
+                fullfile(fdir, sprintf('05_top%d_barh_delta_peak_%s_%s.png', nQ, peakPh, dName)), ylab);
+            phase5_tree_delta_vs_baseline(Node, dcol, topIdx, sprintf( ...
+                '%s | peak phase %s | top %d by |Δ vs baseline|', dName, peakPh, nQ), ...
+                fullfile(fdir, sprintf('06_tree_top%d_delta_peak_%s_%s.png', nQ, peakPh, dName)));
+        end
 
         fprintf('Phase-5 within %s → %s\n', dName, sub);
     end
@@ -342,9 +346,15 @@ end
 function phase5_tree_delta_vs_baseline(Node, dcol, topIdx, titleStr, pngPath)
     n = height(Node);
     pvis = ones(n, 1);
-    mx = max(abs(dcol(topIdx)), [], 'omitnan');
-    if ~isfinite(mx) || mx <= 0
+    vals = abs(dcol(topIdx));
+    vals = vals(isfinite(vals));
+    if isempty(vals)
         mx = 1;
+    else
+        mx = max(vals);
+        if ~isscalar(mx) || ~isfinite(mx) || mx <= 0
+            mx = 1;
+        end
     end
     for i = 1:n
         if topIdx(i) && isfinite(dcol(i))

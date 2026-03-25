@@ -79,4 +79,6 @@ trap_run_phase5_timeline_analysis(struct( ...
 - [ ] Phases cover the five timeline names (or edit **`phase5_phases`** / **`phase5_baseline_phase`** in `trap_config.m` to match your study).
 - [ ] `init_TRAP_pipeline` → `RUN_PIPELINE_ALL` or `trap_run_phase5_timeline_analysis`.
 
+**Smoketest without real data:** **`examples/step10_toy/README.md`** — run **`RUN_STEP10_TOY_SMOKETEST`** from the repo root (writes to **`TRAP_OUTPUT/step10_toy_smoketest/`** only).
+
 See also: **`WHEN_YOU_ADD_MICE_EN_KR.md`**, **`DENSITY_CSV_SETUP.txt`**, **`WORKFLOW.md`**.
