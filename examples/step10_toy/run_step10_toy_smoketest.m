@@ -37,8 +37,9 @@ function run_step10_toy_smoketest(opts)
     if isfield(opts, 'phase_AP_z_within_phase')
         C.phase_AP_z_within_phase = logical(opts.phase_AP_z_within_phase);
     end
+    % Step 10 always writes raw_cells_mm3/ and z_within_phase/; phase_AP_z_within_phase affects other steps only.
 
-    fprintf('Toy Step-10 smoketest:\n  CSV: %s\n  manifest: %s\n  out: %s\n', ...
+    fprintf('Toy Step-10 smoketest:\n  CSV: %s\n  manifest: %s\n  out: %s/{raw_cells_mm3,z_within_phase}/\n', ...
         csvPath, manifestPath, C.phase5_timeline_root);
     trap_run_phase5_timeline_analysis(C);
     fprintf('Done. Inspect TRAP_OUTPUT/step10_toy_smoketest/\n');

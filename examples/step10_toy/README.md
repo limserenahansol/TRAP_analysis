@@ -1,6 +1,6 @@
 # Step 10 toy / smoketest (no real TRAP data)
 
-Generates **synthetic** density CSV + manifest (20 mice × 5 phases × Active/Passive), runs **`trap_run_phase5_timeline_analysis`** with outputs under **`TRAP_OUTPUT/step10_toy_smoketest/`** so your real **`10_five_phase_timeline/`** folder is untouched.
+Generates **synthetic** density CSV + manifest (20 mice × 5 phases × Active/Passive), runs **`trap_run_phase5_timeline_analysis`** with outputs under **`TRAP_OUTPUT/step10_toy_smoketest/raw_cells_mm3/`** and **`…/z_within_phase/`** (plus forebrain suite if enabled) so your real **`10_five_phase_timeline/`** folder is untouched.
 
 ## Run
 

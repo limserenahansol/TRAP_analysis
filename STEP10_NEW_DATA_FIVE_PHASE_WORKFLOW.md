@@ -59,18 +59,23 @@ trap_run_phase5_timeline_analysis(struct( ...
 
 **Primary root:** **`TRAP_OUTPUT/10_five_phase_timeline/`** (`phase5_timeline_root`).
 
-**Duplicate (default on):** **`TRAP_OUTPUT/11_five_phase_timeline_forebrain_gray/`** — same analyses with **`trap_AP_filter_forebrain_exclude_fiber_wm`**. Toggle with **`phase5_run_forebrain_duplicate`** in `trap_config.m`.
+Under each timeline root, outputs are duplicated in two folders:
 
-**Four main questions** (see **`QUESTIONS_1_to_4/QUESTIONS_1_to_4_summary.txt`** in each root):
+- **`raw_cells_mm3/`** — all figures/tables use **raw** pooled density (cells/mm³).
+- **`z_within_phase/`** — same structure using **within-phase z** per region (across mice), matching Step 3.
+
+**Duplicate suite (default on):** **`TRAP_OUTPUT/11_five_phase_timeline_forebrain_gray/`** — same two-scale layout with **`trap_AP_filter_forebrain_exclude_fiber_wm`**. Toggle with **`phase5_run_forebrain_duplicate`** in `trap_config.m`.
+
+**Four main questions** (see **`QUESTIONS_1_to_4/QUESTIONS_1_to_4_summary.txt`** inside **`raw_cells_mm3/`** and **`z_within_phase/`**):
 
 1. Within **Active** / **Passive**: which phase has the largest **median |Δ vs baseline|** across regions? (`within_*/tables/within_group_phase_ranking_vs_baseline.csv`, bar chart `04_median_abs_delta…`).
 2. At that **peak phase**: **top N** regions (default 25) by **|Δ vs baseline|** — CSV + horizontal bar chart + tree (`top*_regions_at_peak_phase_*.csv`, figures `05–06`). N = **`phase5_topN_questions`** in `trap_config.m`.
 3. **Between** Active and Passive: which phase has the strongest typical separation? Ranking score = **median |mean_A − mean_P|** × **(1 + log(1 + n_sig))** (`cross_group_…/tables/cross_group_which_phase_strongest_AP.csv`).
 4. At that **peak phase**: **top N** regions by **|A − P|** (`top*_between_group_at_peak_phase_*.csv`, barh + tree in `cross_group_…/figures_described/`).
 
-**Cross-group per phase (Step 6–style):** `cross_group_Active_vs_Passive/per_phase/<Phase>/figures_described/` — volcano, atlas tree (significant), ALL-significant **mice+SEM** bars, top-N **direction-only** bars (A>P and P>A).
+**Cross-group per phase (Step 6–style):** `<scale>/cross_group_Active_vs_Passive/per_phase/<Phase>/figures_described/` — volcano, atlas tree (significant), ALL-significant **mice+SEM** bars, top-N **direction-only** bars (A>P and P>A).
 
-**Within each delivery:** `within_Active_mice/` and `within_Passive_mice/` — full fluctuation CSV, heatmaps, line plots, phase-ranking bar, peak-phase top-N bars + tree.
+**Within each delivery:** `<scale>/within_Active_mice/` and `<scale>/within_Passive_mice/` — full fluctuation CSV, heatmaps, line plots, phase-ranking bar, peak-phase top-N bars + tree. Replace `<scale>` with **`raw_cells_mm3`** or **`z_within_phase`**.
 
 ## Checklist
 

@@ -1,5 +1,6 @@
-function trap_phase_plot_AP_bars_sem_mice(densMean, GroupDelivery, GroupPhase, phaseName, Node, Tsub, titleStr, pngPath, readmeTxt)
+function trap_phase_plot_AP_bars_sem_mice(densMean, GroupDelivery, GroupPhase, phaseName, Node, Tsub, titleStr, pngPath, readmeTxt, Ccfg)
 % Per region: mean bars (Active red, Passive blue), SEM error bars, dots = one mouse each.
+% Optional Ccfg (10th arg): use for y-axis scale label; default trap_config().
 % Each mouse value = (Left+Right)/2 for that region (trap_load_pooled_density_LR).
 % p_AP = ranksum(Active mice vs Passive mice) — computed on all mice, not on a single mean.
 
@@ -96,7 +97,9 @@ function trap_phase_plot_AP_bars_sem_mice(densMean, GroupDelivery, GroupPhase, p
             'VerticalAlignment', 'bottom', 'FontSize', max(5, min(8, round(95 / max(ng, 1)))), 'Interpreter', 'none');
     end
 
-    Ccfg = trap_config();
+    if nargin < 10 || isempty(Ccfg)
+        Ccfg = trap_config();
+    end
     xLabs = trap_region_plot_tick_labels(double(Tsub.id), Tsub.region, Ccfg);
     set(gca, 'XTick', 1:ng, 'XTickLabel', xLabs, ...
         'XTickLabelRotation', 55, 'FontSize', max(6, min(9, round(110 / max(ng, 1)))));

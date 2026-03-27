@@ -127,7 +127,7 @@ Executed in order by **`RUN_PIPELINE_ALL.m`** (after **`init_TRAP_pipeline`**).
 | **7** | **Directional scenarios** — separate folders for **scenario** contrasts (volcano + directional bar-style summaries). | **`07_directional_AP_scenarios/`** |
 | **8** | **Within-group Rein vs Withdrawal** — for **Active-only** and **Passive-only** mice: regional **mean difference** Rein−With + **Wilcoxon**. | **`08_within_group_Rein_vs_Withdrawal_delta/`** |
 | **9** | **Same analyses as 6–8** on a **forebrain-focused** region set (excludes brainstem + cerebellum per Step 9 mask). | **`09_forebrain_no_brainstem_cerebellum/`** |
-| **10** | **Five-phase timeline** — within delivery: means per phase, **Δ vs baseline**, heatmaps / line plots; cross-group: **Active vs Passive within each phase**. | **`10_five_phase_timeline/`** (`phase5_timeline_root`) |
+| **10** | **Five-phase timeline** — within delivery: means per phase, **Δ vs baseline**, heatmaps / line plots; cross-group: **Active vs Passive within each phase**. **Always** under **`raw_cells_mm3/`** and **`z_within_phase/`** (full duplicate trees). | **`10_five_phase_timeline/`** (`phase5_timeline_root`) |
 
 **Step 4 vs Step 6:** Step 6 is “**one phase at a time**” (A vs P in Rein **or** in With). Step 4 is “**both phases together**” for a **pattern** (e.g. opposite signs). **Top-region lists need not match** — that is expected.
 
@@ -179,9 +179,10 @@ Most PNGs live in a **`figures_described/`** folder. For many plots there is a *
 
 ### Step 10 — Five-phase timeline (`10_five_phase_timeline/`)
 
-- **Δ vs baseline heatmap** — rows = regions, columns = phases; values = **mean(phase) − mean(baseline)** within **Active** or **Passive** (raw density or z, per config).
-- **Row-wise z across phases** — **shape** of change across the timeline (magnitude-invariant).
-- **Line plots (top-N regions)** — **mean density (or z)** vs phase for the most **variable** regions.
+- **Two parallel output trees:** **`raw_cells_mm3/`** (cells/mm³) and **`z_within_phase/`** (within-phase z). `phase_AP_z_within_phase` does **not** select one branch for Step 10.
+- **Δ vs baseline heatmap** — rows = regions, columns = phases; values = **mean(phase) − mean(baseline)** within **Active** or **Passive** (units match that folder).
+- **Row-wise z across phases** — **shape** of change across the timeline (magnitude-invariant); built from that folder’s phase means.
+- **Line plots (top-N regions)** — **mean density or mean z** vs phase for the most **variable** regions.
 - **Volcano per phase** — **Active vs Passive** **within that phase only** (same statistical idea as Step 6).
 
 ---

@@ -1,7 +1,12 @@
 function trap_run_phase5_timeline_analysis(userC)
 %TRAP_RUN_PHASE5_TIMELINE_ANALYSIS  Five-phase TRAP: within-group vs baseline + Active vs Passive per phase.
 %
-%   Answers (see QUESTIONS_1_to_4_summary.txt in each output root):
+%   Always writes two parallel trees under phase5_timeline_root:
+%     raw_cells_mm3/   — cells/mm³ (no within-phase z on the working matrix)
+%     z_within_phase/  — within-phase z per region (same convention as Step 3 / phase_AP_z_within_phase)
+%   trap_config.phase_AP_z_within_phase does NOT select a single Step-10 branch; it still controls Steps 6–9.
+%
+%   Answers (see QUESTIONS_1_to_4_summary.txt under each scale folder):
 %     Q1) Within Active / within Passive: which phase differs most from baseline (median |Δ| across regions)?
 %     Q2) In that peak phase: top-N regions by |Δ vs baseline| (CSV + bar + tree).
 %     Q3) Between Active and Passive: which phase shows strongest separation (median |mean_A−mean_P|)?
@@ -43,10 +48,6 @@ function phase5_run_one_root(C)
     if isfield(C, 'phase_AP_topN_direction_only'), ntd = max(1, round(C.phase_AP_topN_direction_only)); end
 
     trap_ensure_dir(root);
-    figRoot = fullfile(root, 'figures_described');
-    trap_ensure_dir(figRoot);
-    qdir = fullfile(root, 'QUESTIONS_1_to_4');
-    trap_ensure_dir(qdir);
 
     [densMean, Node, sampleNames, GroupDelivery, GroupPhase] = trap_load_pooled_density_LR(C);
     [densMean, GroupDelivery, GroupPhase, sampleNames] = trap_AP_drop_exclude_samples( ...
@@ -59,13 +60,8 @@ function phase5_run_one_root(C)
     end
 
     densRaw = densMean;
-    useZ = isfield(C, 'phase_AP_z_within_phase') && C.phase_AP_z_within_phase;
-    if useZ
-        densMean = trap_zscore_within_phase_columns(densRaw, GroupPhase);
-        fprintf('Phase-5: using within-phase z per region (Step 3 convention).\n');
-    else
-        fprintf('Phase-5: using raw density (cells/mm³).\n');
-    end
+    densZ = trap_zscore_within_phase_columns(densRaw, GroupPhase);
+    fprintf('Phase-5: emitting BOTH scales under %s — raw_cells_mm3/ and z_within_phase/\n', root);
 
     del = string(GroupDelivery);
     pha = string(GroupPhase);
@@ -86,179 +82,217 @@ function phase5_run_one_root(C)
     else
         critStr = sprintf('Wilcoxon rank-sum, raw p<=%.3g', C.phase_AP_p_raw);
     end
-    critStrP = [critStr trap_AP_plot_scale_suffix(C)];
 
     readme = sprintf([ ...
         'Five-phase TRAP (vs baseline + Active vs Passive per phase).\n' ...
+        'Outputs are duplicated under two subfolders of this timeline root:\n' ...
+        '  raw_cells_mm3/   — working matrix = pooled density (cells/mm³)\n' ...
+        '  z_within_phase/  — working matrix = within-phase z per region (across mice; Step 3 convention)\n' ...
+        'trap_config.phase_AP_z_within_phase does not choose between them for Step 10; both are always written.\n' ...
         'Phases: %s.\nBaseline for within-group deltas: %s.\n' ...
         'Q1/Q2: within Active or Passive — peak phase = argmax median(|mean(phase)−mean(baseline)|) across regions.\n' ...
         'Q3/Q4: cross-group — peak phase = argmax median(|mean_Active−mean_Passive|) across regions.\n' ...
         'Within-group mice are unpaired across phases unless manifest encodes pairing.\n' ...
         'Cross-group: ranksum per region within each phase (same as Step 6).\n' ...
-        'Per-phase figures (volcano, tree, mice+SEM, directional top-N) mirror Step 6 layout.\n'], ...
+        'Per-phase figures (volcano, tree, mice+SEM, directional top-N) mirror Step 6 layout.\n' ...
+        'Heatmap 02_* is always row-wise z across phase columns (pattern shape), built from that scale''s phase means.\n'], ...
         strjoin(phases, ', '), bPh);
     fid = fopen(fullfile(root, 'README_phase5_timeline.txt'), 'w');
     if fid > 0, fprintf(fid, '%s', readme); fclose(fid); end
 
-    peakPhaseWithin = strings(1, 2);
-    peakPhaseCross = "";
+    scaleDirs = {'raw_cells_mm3', 'z_within_phase'};
+    useZFlags = [false, true];
 
-    %% --- Within-group: Active, then Passive
-    for iD = 1:2
-        dName = ["Active", "Passive"];
-        dName = dName(iD);
-        sub = fullfile(root, sprintf('within_%s_mice', dName));
-        tdir = fullfile(sub, 'tables');
-        fdir = fullfile(sub, 'figures_described');
-        trap_ensure_dir(tdir);
-        trap_ensure_dir(fdir);
-
-        [meanMat, cntMat] = regional_means_by_phase(densMean, del, pha, dName, phases);
-        [Tfl, deltaMat] = build_fluctuation_table(Node, meanMat, cntMat, phases, ib);
-
-        writetable(Tfl, fullfile(tdir, 'region_phase_means_and_fluctuation.csv'));
-        phase5_plot_heatmap_delta(Tfl, deltaMat, phases, ib, Node, nTopH, dName, useZ, fdir);
-        phase5_plot_heatmap_rowz(Tfl, meanMat, phases, Node, nTopH, dName, useZ, fdir);
-        phase5_plot_lines_topn(Tfl, meanMat, phases, Node, nTopL, dName, useZ, fdir);
-
-        [Tpr, peakJ, peakPh] = phase5_within_phase_ranking_table(deltaMat, phases, ib, cntMat, dName);
-        writetable(Tpr, fullfile(tdir, 'within_group_phase_ranking_vs_baseline.csv'));
-        peakPhaseWithin(iD) = peakPh;
-        fidp = fopen(fullfile(tdir, sprintf('peak_phase_most_changed_vs_baseline_%s.txt', dName)), 'w');
-        if fidp > 0
-            fprintf(fidp, '%s\n', peakPh);
-            fclose(fidp);
-        end
-        phase5_bar_median_abs_delta_per_phase(Tpr, peakPh, dName, useZ, ...
-            fullfile(fdir, sprintf('04_median_abs_delta_vs_baseline_by_phase_%s.png', dName)));
-
-        dcol = deltaMat(:, peakJ);
-        [Ttop, topIdx] = phase5_topn_table_within(Node, meanMat, phases, ib, peakJ, dcol, nQ);
-        if height(Ttop) >= 1
-            writetable(Ttop, fullfile(tdir, sprintf('top%d_regions_at_peak_phase_%s_%s.csv', nQ, peakPh, dName)));
-        end
-        ylab = ternary_str(useZ, 'Δ vs baseline (z within-phase)', 'Δ vs baseline (cells/mm³)');
-        if height(Ttop) >= 1
-            phase5_barh_region_delta(Ttop, sprintf( ...
-                'Top %d |Δ vs baseline| — %s — peak phase %s', nQ, dName, peakPh), ...
-                fullfile(fdir, sprintf('05_top%d_barh_delta_peak_%s_%s.png', nQ, peakPh, dName)), ylab);
-            phase5_tree_delta_vs_baseline(Node, dcol, topIdx, sprintf( ...
-                '%s | peak phase %s | top %d by |Δ vs baseline|', dName, peakPh, nQ), ...
-                fullfile(fdir, sprintf('06_tree_top%d_delta_peak_%s_%s.png', nQ, peakPh, dName)));
+    for iSc = 1:numel(scaleDirs)
+        subRoot = fullfile(root, scaleDirs{iSc});
+        useZ = useZFlags(iSc);
+        densWork = densRaw;
+        if useZ
+            densWork = densZ;
         end
 
-        fprintf('Phase-5 within %s → %s\n', dName, sub);
-    end
-
-    %% --- Cross-group Active vs Passive per phase (Step 6–style figures)
-    cg = fullfile(root, 'cross_group_Active_vs_Passive');
-    cgt = fullfile(cg, 'tables');
-    cgf = fullfile(cg, 'figures_described');
-    trap_ensure_dir(cgt);
-    trap_ensure_dir(cgf);
-
-    nP = numel(phases);
-    medAbsAP = nan(1, nP);
-    nSigAP = zeros(1, nP);
-    Tcell = cell(1, nP);
-
-    for ip = 1:nP
-        ph = phases(ip);
-        Tph = trap_phase_AP_table(densMean, GroupDelivery, GroupPhase, ph, Node, C);
-        Tcell{ip} = Tph;
-        mdv = Tph.mean_Active_minus_Passive;
-        ok = isfinite(mdv);
-        if any(ok)
-            medAbsAP(ip) = median(abs(mdv(ok)), 'omitnan');
-        end
-        pass = trap_phase_AP_pass(Tph, C);
-        nSigAP(ip) = nnz(pass);
-        writetable(Tph, fullfile(cgt, sprintf('phase_stats_%s_Active_vs_Passive.csv', ph)));
-
-        slug = matlab.lang.makeValidName(char(strrep(ph, ' ', '_')));
-        pdir = fullfile(cg, 'per_phase', slug);
-        pfig = fullfile(pdir, 'figures_described');
-        ptab = fullfile(pdir, 'tables');
-        trap_ensure_dir(pfig);
-        trap_ensure_dir(ptab);
-        writetable(Tph(pass, :), fullfile(ptab, sprintf('ALL_significant_%s.csv', slug)));
-
-        trap_phase_volcano_AP(Tph, pass, sprintf('%s: Active vs Passive | %s', ph, critStrP), ...
-            fullfile(pfig, '00_volcano.png'), critStrP, C);
-        trap_phase_tree_plot(Node, Tph, pass, sprintf('%s: sig regions (tree) | %s', ph, critStrP), ...
-            fullfile(pfig, '01_tree_sig_regions.png'), critStrP);
-        if nnz(pass) > 0
-            trap_phase_barh_actpas_means(densMean, GroupDelivery, GroupPhase, ph, Node, Tph(pass, :), ...
-                sprintf('%s: ALL sig | mice+SEM | %s', ph, critStrP), fullfile(pfig, '02_ALL_sig_mice_sem.png'), critStrP);
+        Cp = C;
+        Cp.phase_AP_z_within_phase = useZ;
+        if useZ
+            Cp.phase_AP_plot_scale_label = 'within-phase z (per region, across mice)';
         else
-            trap_export_placeholder_figure(fullfile(pfig, '02_ALL_sig_mice_sem.png'), ...
-                sprintf('%s: ALL sig mice+SEM', ph), 'No regions pass significance criterion.');
+            Cp.phase_AP_plot_scale_label = 'raw cells/mm³';
         end
-        trap_phase_barh_actpas_topn_directional(densMean, GroupDelivery, GroupPhase, ph, Node, Tph, true, ntd, ...
-            sprintf('%s: top %d mean A>P (direction only)', ph, ntd), fullfile(pfig, '03_topN_Act_gt_Pas_direction.png'), critStrP);
-        trap_phase_barh_actpas_topn_directional(densMean, GroupDelivery, GroupPhase, ph, Node, Tph, false, ntd, ...
-            sprintf('%s: top %d mean P>A (direction only)', ph, ntd), fullfile(pfig, '04_topN_Pas_gt_Act_direction.png'), critStrP);
-    end
+        critStrP = [critStr trap_AP_plot_scale_suffix(Cp)];
 
-    scoreCross = medAbsAP;
-    for ip = 1:nP
-        if ~isnan(medAbsAP(ip))
-            scoreCross(ip) = medAbsAP(ip) * (1 + log1p(nSigAP(ip)));
+        readmeSc = sprintf('SCALE FOLDER: %s\n\n%s', scaleDirs{iSc}, readme);
+        fidr = fopen(fullfile(subRoot, 'README_this_scale.txt'), 'w');
+        if fidr > 0, fprintf(fidr, '%s', readmeSc); fclose(fidr); end
+
+        peakPhaseWithin = strings(1, 2);
+        peakPhaseCross = "";
+
+        %% --- Within-group: Active, then Passive
+        for iD = 1:2
+            dName = ["Active", "Passive"];
+            dName = dName(iD);
+            sub = fullfile(subRoot, sprintf('within_%s_mice', dName));
+            tdir = fullfile(sub, 'tables');
+            fdir = fullfile(sub, 'figures_described');
+            trap_ensure_dir(tdir);
+            trap_ensure_dir(fdir);
+
+            [meanMat, cntMat] = regional_means_by_phase(densWork, del, pha, dName, phases);
+            [Tfl, deltaMat] = build_fluctuation_table(Node, meanMat, cntMat, phases, ib);
+
+            writetable(Tfl, fullfile(tdir, 'region_phase_means_and_fluctuation.csv'));
+            phase5_plot_heatmap_delta(Tfl, deltaMat, phases, ib, Node, nTopH, dName, useZ, fdir);
+            phase5_plot_heatmap_rowz(Tfl, meanMat, phases, Node, nTopH, dName, useZ, fdir);
+            phase5_plot_lines_topn(Tfl, meanMat, phases, Node, nTopL, dName, useZ, fdir);
+
+            [Tpr, peakJ, peakPh] = phase5_within_phase_ranking_table(deltaMat, phases, ib, cntMat, dName);
+            writetable(Tpr, fullfile(tdir, 'within_group_phase_ranking_vs_baseline.csv'));
+            peakPhaseWithin(iD) = peakPh;
+            fidp = fopen(fullfile(tdir, sprintf('peak_phase_most_changed_vs_baseline_%s.txt', dName)), 'w');
+            if fidp > 0
+                fprintf(fidp, '%s\n', peakPh);
+                fclose(fidp);
+            end
+            phase5_bar_median_abs_delta_per_phase(Tpr, peakPh, dName, useZ, ...
+                fullfile(fdir, sprintf('04_median_abs_delta_vs_baseline_by_phase_%s.png', dName)));
+
+            dcol = deltaMat(:, peakJ);
+            [Ttop, topIdx] = phase5_topn_table_within(Node, meanMat, phases, ib, peakJ, dcol, nQ);
+            if height(Ttop) >= 1
+                writetable(Ttop, fullfile(tdir, sprintf('top%d_regions_at_peak_phase_%s_%s.csv', nQ, peakPh, dName)));
+            end
+            ylab = ternary_str(useZ, 'Δ vs baseline (z within-phase)', 'Δ vs baseline (cells/mm³)');
+            if height(Ttop) >= 1
+                phase5_barh_region_delta(Ttop, sprintf( ...
+                    'Top %d |Δ vs baseline| — %s — peak phase %s', nQ, dName, peakPh), ...
+                    fullfile(fdir, sprintf('05_top%d_barh_delta_peak_%s_%s.png', nQ, peakPh, dName)), ylab);
+                phase5_tree_delta_vs_baseline(Node, dcol, topIdx, sprintf( ...
+                    '%s | peak phase %s | top %d by |Δ vs baseline|', dName, peakPh, nQ), ...
+                    fullfile(fdir, sprintf('06_tree_top%d_delta_peak_%s_%s.png', nQ, peakPh, dName)));
+            end
+
+            fprintf('Phase-5 [%s] within %s → %s\n', scaleDirs{iSc}, dName, sub);
         end
-    end
-    [mxSc, jPeakAP] = max(scoreCross, [], 'omitnan');
-    if isempty(jPeakAP) || ~isfinite(mxSc)
-        jx = find(isfinite(medAbsAP), 1);
-        if isempty(jx), jx = 1; end
-        jPeakAP = jx;
-    end
-    peakPhaseCross = phases(jPeakAP);
-    Tpeak = Tcell{jPeakAP};
 
-    TcrossRank = table(phases(:), medAbsAP(:), nSigAP(:), scoreCross(:), ...
-        'VariableNames', {'phase', 'median_abs_Act_minus_Passive', 'n_regions_significant', 'ranking_score_medianAbs_x_log1p_nSig'});
-    writetable(TcrossRank, fullfile(cgt, 'cross_group_which_phase_strongest_AP.csv'));
-    fidc = fopen(fullfile(cgt, 'peak_phase_strongest_Act_vs_Passive.txt'), 'w');
-    if fidc > 0
-        fprintf(fidc, '%s\n', peakPhaseCross);
-        fclose(fidc);
+        %% --- Cross-group Active vs Passive per phase (Step 6–style figures)
+        cg = fullfile(subRoot, 'cross_group_Active_vs_Passive');
+        cgt = fullfile(cg, 'tables');
+        cgf = fullfile(cg, 'figures_described');
+        trap_ensure_dir(cgt);
+        trap_ensure_dir(cgf);
+
+        nP = numel(phases);
+        medAbsAP = nan(1, nP);
+        nSigAP = zeros(1, nP);
+        Tcell = cell(1, nP);
+
+        for ip = 1:nP
+            ph = phases(ip);
+            Tph = trap_phase_AP_table(densWork, GroupDelivery, GroupPhase, ph, Node, C);
+            Tcell{ip} = Tph;
+            mdv = Tph.mean_Active_minus_Passive;
+            ok = isfinite(mdv);
+            if any(ok)
+                medAbsAP(ip) = median(abs(mdv(ok)), 'omitnan');
+            end
+            pass = trap_phase_AP_pass(Tph, C);
+            nSigAP(ip) = nnz(pass);
+            writetable(Tph, fullfile(cgt, sprintf('phase_stats_%s_Active_vs_Passive.csv', ph)));
+
+            slug = matlab.lang.makeValidName(char(strrep(ph, ' ', '_')));
+            pdir = fullfile(cg, 'per_phase', slug);
+            pfig = fullfile(pdir, 'figures_described');
+            ptab = fullfile(pdir, 'tables');
+            trap_ensure_dir(pfig);
+            trap_ensure_dir(ptab);
+            writetable(Tph(pass, :), fullfile(ptab, sprintf('ALL_significant_%s.csv', slug)));
+
+            trap_phase_volcano_AP(Tph, pass, sprintf('%s: Active vs Passive | %s', ph, critStrP), ...
+                fullfile(pfig, '00_volcano.png'), critStrP, Cp);
+            trap_phase_tree_plot(Node, Tph, pass, sprintf('%s: sig regions (tree) | %s', ph, critStrP), ...
+                fullfile(pfig, '01_tree_sig_regions.png'), critStrP);
+            if nnz(pass) > 0
+                trap_phase_barh_actpas_means(densWork, GroupDelivery, GroupPhase, ph, Node, Tph(pass, :), ...
+                    sprintf('%s: ALL sig | mice+SEM | %s', ph, critStrP), fullfile(pfig, '02_ALL_sig_mice_sem.png'), critStrP, Cp);
+            else
+                trap_export_placeholder_figure(fullfile(pfig, '02_ALL_sig_mice_sem.png'), ...
+                    sprintf('%s: ALL sig mice+SEM', ph), 'No regions pass significance criterion.');
+            end
+            trap_phase_barh_actpas_topn_directional(densWork, GroupDelivery, GroupPhase, ph, Node, Tph, true, ntd, ...
+                sprintf('%s: top %d mean A>P (direction only)', ph, ntd), fullfile(pfig, '03_topN_Act_gt_Pas_direction.png'), critStrP, Cp);
+            trap_phase_barh_actpas_topn_directional(densWork, GroupDelivery, GroupPhase, ph, Node, Tph, false, ntd, ...
+                sprintf('%s: top %d mean P>A (direction only)', ph, ntd), fullfile(pfig, '04_topN_Pas_gt_Act_direction.png'), critStrP, Cp);
+        end
+
+        scoreCross = medAbsAP;
+        for ip = 1:nP
+            if ~isnan(medAbsAP(ip))
+                scoreCross(ip) = medAbsAP(ip) * (1 + log1p(nSigAP(ip)));
+            end
+        end
+        [mxSc, jPeakAP] = max(scoreCross, [], 'omitnan');
+        if isempty(jPeakAP) || ~isfinite(mxSc)
+            jx = find(isfinite(medAbsAP), 1);
+            if isempty(jx), jx = 1; end
+            jPeakAP = jx;
+        end
+        peakPhaseCross = phases(jPeakAP);
+        Tpeak = Tcell{jPeakAP};
+
+        TcrossRank = table(phases(:), medAbsAP(:), nSigAP(:), scoreCross(:), ...
+            'VariableNames', {'phase', 'median_abs_Act_minus_Passive', 'n_regions_significant', 'ranking_score_medianAbs_x_log1p_nSig'});
+        writetable(TcrossRank, fullfile(cgt, 'cross_group_which_phase_strongest_AP.csv'));
+        fidc = fopen(fullfile(cgt, 'peak_phase_strongest_Act_vs_Passive.txt'), 'w');
+        if fidc > 0
+            fprintf(fidc, '%s\n', peakPhaseCross);
+            fclose(fidc);
+        end
+        phase5_bar_phase_metric(TcrossRank.phase, TcrossRank.ranking_score_medianAbs_x_log1p_nSig, ...
+            'Cross-group: phase ranking score (median |A−P| × (1+log(1+n_sig)))', ...
+            fullfile(cgf, '00_phase_ranking_Act_vs_Passive.png'));
+
+        [TtopAP, ~] = phase5_topn_between_group(Tpeak, nQ);
+        writetable(TtopAP, fullfile(cgt, sprintf('top%d_between_group_at_peak_phase_%s.csv', nQ, peakPhaseCross)));
+        phase5_barh_AP_effect(TtopAP, sprintf( ...
+            'Top %d regions by |Active−Passive| — peak phase %s', nQ, peakPhaseCross), ...
+            fullfile(cgf, sprintf('01_top%d_barh_effect_peak_%s.png', nQ, peakPhaseCross)), ...
+            useZ, critStrP);
+        topPass = false(height(Node), 1);
+        for k = 1:height(TtopAP)
+            ix = find(Node.id == TtopAP.id(k), 1);
+            if ~isempty(ix), topPass(ix) = true; end
+        end
+        trap_phase_tree_plot(Node, Tpeak, topPass, sprintf( ...
+            '%s: top %d by |A−P| (highlighted)', peakPhaseCross, min(nQ, height(TtopAP))), ...
+            fullfile(cgf, sprintf('02_tree_top%d_peak_phase.png', nQ)), critStrP);
+
+        fprintf('Phase-5 [%s] cross-group AP → %s\n', scaleDirs{iSc}, cg);
+
+        %% Summary Q1–Q4 (per scale)
+        qdir = fullfile(subRoot, 'QUESTIONS_1_to_4');
+        trap_ensure_dir(qdir);
+        sumPath = fullfile(qdir, 'QUESTIONS_1_to_4_summary.txt');
+        fidq = fopen(sumPath, 'w');
+        if fidq > 0
+            fprintf(fidq, '%s', readmeSc);
+            fprintf(fidq, '\n\n--- Answers ---\n');
+            fprintf(fidq, 'Q1a (within Active): phase with largest median |Δ vs baseline| = %s\n', peakPhaseWithin(1));
+            fprintf(fidq, 'Q1b (within Passive): %s\n', peakPhaseWithin(2));
+            fprintf(fidq, 'Q2: see within_*/tables/top*_regions_at_peak_phase_*.csv and figures 05–06.\n');
+            fprintf(fidq, 'Q3 (cross-group peak phase): %s (see cross_group_.../tables/cross_group_which_phase_strongest_AP.csv)\n', peakPhaseCross);
+            fprintf(fidq, 'Q4: see cross_group_.../tables/top*_between_group_at_peak_phase_*.csv and figures_described barh.\n');
+            fclose(fidq);
+        end
+
+        figScale = fullfile(subRoot, 'figures_described');
+        trap_ensure_dir(figScale);
+        trap_write_folder_readme(figScale, sprintf('Phase-5 (%s)', scaleDirs{iSc}), readmeSc);
+        fprintf('Phase-5 timeline scale branch complete → %s\n', subRoot);
     end
-    phase5_bar_phase_metric(TcrossRank.phase, TcrossRank.ranking_score_medianAbs_x_log1p_nSig, ...
-        'Cross-group: phase ranking score (median |A−P| × (1+log(1+n_sig)))', ...
-        fullfile(cgf, '00_phase_ranking_Act_vs_Passive.png'));
 
-    [TtopAP, ~] = phase5_topn_between_group(Tpeak, nQ);
-    writetable(TtopAP, fullfile(cgt, sprintf('top%d_between_group_at_peak_phase_%s.csv', nQ, peakPhaseCross)));
-    phase5_barh_AP_effect(TtopAP, sprintf( ...
-        'Top %d regions by |Active−Passive| — peak phase %s', nQ, peakPhaseCross), ...
-        fullfile(cgf, sprintf('01_top%d_barh_effect_peak_%s.png', nQ, peakPhaseCross)), ...
-        useZ, critStrP);
-    topPass = false(height(Node), 1);
-    for k = 1:height(TtopAP)
-        ix = find(Node.id == TtopAP.id(k), 1);
-        if ~isempty(ix), topPass(ix) = true; end
-    end
-    trap_phase_tree_plot(Node, Tpeak, topPass, sprintf( ...
-        '%s: top %d by |A−P| (highlighted)', peakPhaseCross, min(nQ, height(TtopAP))), ...
-        fullfile(cgf, sprintf('02_tree_top%d_peak_phase.png', nQ)), critStrP);
-
-    fprintf('Phase-5 cross-group AP → %s\n', cg);
-
-    %% Summary Q1–Q4
-    sumPath = fullfile(qdir, 'QUESTIONS_1_to_4_summary.txt');
-    fidq = fopen(sumPath, 'w');
-    if fidq > 0
-        fprintf(fidq, '%s', readme);
-        fprintf(fidq, '\n\n--- Answers ---\n');
-        fprintf(fidq, 'Q1a (within Active): phase with largest median |Δ vs baseline| = %s\n', peakPhaseWithin(1));
-        fprintf(fidq, 'Q1b (within Passive): %s\n', peakPhaseWithin(2));
-        fprintf(fidq, 'Q2: see within_*/tables/top*_regions_at_peak_phase_*.csv and figures 05–06.\n');
-        fprintf(fidq, 'Q3 (cross-group peak phase): %s (see cross_group_.../tables/cross_group_which_phase_strongest_AP.csv)\n', peakPhaseCross);
-        fprintf(fidq, 'Q4: see cross_group_.../tables/top*_between_group_at_peak_phase_*.csv and figures_described barh.\n');
-        fclose(fidq);
-    end
-
-    trap_write_folder_readme(figRoot, 'Phase-5 overview', readme);
+    figRoot = fullfile(root, 'figures_described');
+    trap_ensure_dir(figRoot);
+    trap_write_folder_readme(figRoot, 'Phase-5 overview (see raw_cells_mm3/ and z_within_phase/)', readme);
     fprintf('Phase-5 timeline complete → %s\n', root);
 end
 
