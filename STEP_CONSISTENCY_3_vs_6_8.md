@@ -5,9 +5,9 @@
 ## 1) 스케일 (Z-score, phase 내)
 
 - **Step 3** `03_rep_regions_ZSCORED_within_phase_*.png`: 각 **phase** 안에서, **영역(행)마다** 그 phase의 모든 마우스에 대해 `zscore(..., 0, 2)` → 해당 phase에서 평균 0, 표준편차 1.
-- **Steps 6–9**는 동일하게 **`trap_zscore_within_phase_columns`** 적용 후 분석·플롯 (설정: `C.phase_AP_z_within_phase = true`, 기본값).
+- **Steps 6–9 (및 Step 10)** 는 **`raw_cells_mm3/`** 와 **`z_within_phase/`** 아래에 **동일한 트리를 두 벌** 씁니다. `trap_config.phase_AP_z_within_phase` 로 한쪽만 고르지 **않습니다**.
 
-`phase_AP_z_within_phase = false` 이면 예전처럼 raw density (cells/mm³).
+Step 3 v2와 **같은 z 정의**를 쓰려면 **`z_within_phase/`** 폴더의 표·그림을 보면 됩니다.
 
 ## 2) 샘플(열) 통일
 
@@ -36,6 +36,6 @@
 |------|------|
 | 샘플 | `v2_sample_source = 'manifest'` |
 | 영역 | 동일 `v2_depth_rule` + Step 6 region mask |
-| 스케일 | `phase_AP_z_within_phase = true` (기본) |
+| 스케일 | Step 6–9 출력에서 **`z_within_phase/`** 트리 (또는 비교용 **`raw_cells_mm3/`**) |
 
 **같은 Top 목록**이 필요하면 별도로 CSV에서 id 필터·교집합 후처리.

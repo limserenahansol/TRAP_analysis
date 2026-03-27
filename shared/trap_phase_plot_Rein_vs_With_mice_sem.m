@@ -1,5 +1,6 @@
-function trap_phase_plot_Rein_vs_With_mice_sem(densMean, GroupDelivery, GroupPhase, deliveryName, Node, Tsub, titleStr, pngPath, readmeTxt)
+function trap_phase_plot_Rein_vs_With_mice_sem(densMean, GroupDelivery, GroupPhase, deliveryName, Node, Tsub, titleStr, pngPath, readmeTxt, Ccfg)
 % Within **one delivery** (Active or Passive): Reinstatement mice vs Withdrawal mice per region.
+% Optional Ccfg (10th): y-axis z vs raw; default trap_config().
 % Bars = mean; SEM; dots = one mouse each. Density = (L+R)/2. p = ranksum(Rein values, With values).
 
     if height(Tsub) < 1
@@ -103,7 +104,9 @@ function trap_phase_plot_Rein_vs_With_mice_sem(densMean, GroupDelivery, GroupPha
             'FontSize', max(5, min(7, round(90 / max(ng, 1)))), 'Interpreter', 'none');
     end
 
-    Ccfg = trap_config();
+    if nargin < 10 || isempty(Ccfg)
+        Ccfg = trap_config();
+    end
     xLabs = trap_region_plot_tick_labels(double(Tsub.id), Tsub.region, Ccfg);
     set(gca, 'XTick', 1:ng, 'XTickLabel', xLabs, ...
         'XTickLabelRotation', 55, 'FontSize', max(6, min(9, round(110 / max(ng, 1)))));

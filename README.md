@@ -122,11 +122,11 @@ Executed in order by **`RUN_PIPELINE_ALL.m`** (after **`init_TRAP_pipeline`**).
 | **3** | **Region clustering v2** — phase-aware clustering; builds **`TRAP_downstream_input.mat`** for Step 4. | **`03_region_clustering_v2/`** (+ RepRegions CSVs, figures) |
 | **4** | **Flip / downstream** — regions whose **Reinstatement** and **Withdrawal** Active−Passive pattern meets **Conditions A/B/C** (joint across phases; different question from Step 6). | **`04_flip_downstream/figures_described/`** |
 | **5** | **Utilities** — export region name lists (e.g. depth 5–6). | Next to v2 / config paths |
-| **6** | **Phase-specific Active vs Passive** — per region, **within Reinstatement** and **within Withdrawal** separately; **Wilcoxon rank-sum**; FDR trees / volcanoes / bar plots. | **`06_phase_ActivePassive_FDR/`** (see `trap_config.m` → `phase_AP_root`) |
+| **6** | **Phase-specific Active vs Passive** — per region, **within Reinstatement** and **within Withdrawal** separately; **Wilcoxon rank-sum**; FDR trees / volcanoes / bar plots. **Always** under **`raw_cells_mm3/`** and **`z_within_phase/`**. | **`06_phase_ActivePassive_FDR/`** (see `trap_config.m` → `phase_AP_root`) |
 | **6b** | **Phase-delta screening** — how **\|Δ_Rein − Δ_With\|** ranks regions (exploratory). | Under phase AP / follow-up roots (see console + folder READMEs) |
-| **7** | **Directional scenarios** — separate folders for **scenario** contrasts (volcano + directional bar-style summaries). | **`07_directional_AP_scenarios/`** |
-| **8** | **Within-group Rein vs Withdrawal** — for **Active-only** and **Passive-only** mice: regional **mean difference** Rein−With + **Wilcoxon**. | **`08_within_group_Rein_vs_Withdrawal_delta/`** |
-| **9** | **Same analyses as 6–8** on a **forebrain-focused** region set (excludes brainstem + cerebellum per Step 9 mask). | **`09_forebrain_no_brainstem_cerebellum/`** |
+| **7** | **Directional scenarios** — separate folders for **scenario** contrasts (volcano + directional bar-style summaries). **Dual scale** as Step 6. | **`07_directional_AP_scenarios/`** |
+| **8** | **Within-group Rein vs Withdrawal** — for **Active-only** and **Passive-only** mice: regional **mean difference** Rein−With + **Wilcoxon**. **Dual scale** as Step 6. | **`08_within_group_Rein_vs_Withdrawal_delta/`** |
+| **9** | **Same analyses as 6–8** on a **forebrain-focused** region set (excludes brainstem + cerebellum per Step 9 mask). **Dual scale** under each `step6_*` / `step7_*` / `step8_*`. | **`09_forebrain_no_brainstem_cerebellum/`** |
 | **10** | **Five-phase timeline** — within delivery: means per phase, **Δ vs baseline**, heatmaps / line plots; cross-group: **Active vs Passive within each phase**. **Always** under **`raw_cells_mm3/`** and **`z_within_phase/`** (full duplicate trees). | **`10_five_phase_timeline/`** (`phase5_timeline_root`) |
 
 **Step 4 vs Step 6:** Step 6 is “**one phase at a time**” (A vs P in Rein **or** in With). Step 4 is “**both phases together**” for a **pattern** (e.g. opposite signs). **Top-region lists need not match** — that is expected.
@@ -206,7 +206,7 @@ Most PNGs live in a **`figures_described/`** folder. For many plots there is a *
 ## Before you run (minimal checklist)
 
 1. **`init_TRAP_pipeline`** once per MATLAB session.
-2. **`trap_config.m`** — `csvPath`, outputs, `runMode`, optional `v2_sample_source`, `phase_AP_z_within_phase`, FDR/raw *p*.
+2. **`trap_config.m`** — `csvPath`, outputs, `runMode`, optional `v2_sample_source`, FDR/raw *p*. (Steps 6–10 always write **`raw_cells_mm3/`** and **`z_within_phase/`**; `phase_AP_z_within_phase` is legacy for helpers without an explicit override.)
 3. **`TRAP_cohort_CSVs.txt`** — one density CSV path per line (cohort 1, 2, …); same `id` universe across files.
 4. **`TRAP_sample_manifest.csv`** — `cohort_id`, `column_name`, `delivery`, `phase`, `include`.
 5. **`MOUSE_COHORT.txt`** — optional human notes.

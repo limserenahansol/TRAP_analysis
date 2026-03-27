@@ -100,12 +100,11 @@ function phase5_run_one_root(C)
     fid = fopen(fullfile(root, 'README_phase5_timeline.txt'), 'w');
     if fid > 0, fprintf(fid, '%s', readme); fclose(fid); end
 
-    scaleDirs = {'raw_cells_mm3', 'z_within_phase'};
-    useZFlags = [false, true];
+    scaleDirs = trap_AP_scale_subdirs();
 
     for iSc = 1:numel(scaleDirs)
         subRoot = fullfile(root, scaleDirs{iSc});
-        useZ = useZFlags(iSc);
+        useZ = strcmp(scaleDirs{iSc}, 'z_within_phase');
         densWork = densRaw;
         if useZ
             densWork = densZ;

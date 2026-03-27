@@ -1,5 +1,6 @@
-function trap_plot_shared_regions_Rein_With_mice_sem(densMean, Node, GroupDelivery, GroupPhase, T_rein, T_with, ids, titlePrefix, figDir, critStr, fileTag)
+function trap_plot_shared_regions_Rein_With_mice_sem(densMean, Node, GroupDelivery, GroupPhase, T_rein, T_with, ids, titlePrefix, figDir, critStr, fileTag, Ccfg)
 % Rein and Withdrawal as separate PNGs: bar+SEM+mice. fileTag avoids overwriting (e.g. 'sig' vs 'dirTopN').
+% Optional Ccfg (12th): y-axis z vs raw label for trap_phase_plot_AP_bars_sem_mice.
     if nargin < 11 || isempty(fileTag)
         fileTag = 'shared';
     end
@@ -21,8 +22,15 @@ function trap_plot_shared_regions_Rein_With_mice_sem(densMean, Node, GroupDelive
         trap_export_placeholder_figure(pb, titlePrefix, 'No With rows.');
         return;
     end
-    trap_phase_plot_AP_bars_sem_mice(densMean, GroupDelivery, GroupPhase, "Reinstatement", Node, TsubR, ...
-        sprintf('%s | Reinstatement | n=%d', titlePrefix, height(TsubR)), pa, critStr);
-    trap_phase_plot_AP_bars_sem_mice(densMean, GroupDelivery, GroupPhase, "Withdrawal", Node, TsubW, ...
-        sprintf('%s | Withdrawal | n=%d', titlePrefix, height(TsubW)), pb, critStr);
+    if nargin >= 12 && ~isempty(Ccfg)
+        trap_phase_plot_AP_bars_sem_mice(densMean, GroupDelivery, GroupPhase, "Reinstatement", Node, TsubR, ...
+            sprintf('%s | Reinstatement | n=%d', titlePrefix, height(TsubR)), pa, critStr, Ccfg);
+        trap_phase_plot_AP_bars_sem_mice(densMean, GroupDelivery, GroupPhase, "Withdrawal", Node, TsubW, ...
+            sprintf('%s | Withdrawal | n=%d', titlePrefix, height(TsubW)), pb, critStr, Ccfg);
+    else
+        trap_phase_plot_AP_bars_sem_mice(densMean, GroupDelivery, GroupPhase, "Reinstatement", Node, TsubR, ...
+            sprintf('%s | Reinstatement | n=%d', titlePrefix, height(TsubR)), pa, critStr);
+        trap_phase_plot_AP_bars_sem_mice(densMean, GroupDelivery, GroupPhase, "Withdrawal", Node, TsubW, ...
+            sprintf('%s | Withdrawal | n=%d', titlePrefix, height(TsubW)), pb, critStr);
+    end
 end

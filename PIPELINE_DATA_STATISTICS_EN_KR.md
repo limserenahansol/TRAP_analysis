@@ -72,7 +72,7 @@ Those are **different scientific questions**. **Top-region lists do not need to 
 | **Exclude samples** | Rows with `phase=Exclude` are removed before Steps 6–9 (optional; matches Step 3 manifest workflow). |
 | **Region subset** | Steps 6–9 can restrict to the **same depth/hierarchy** as Step 3 (`hierarchy567` or `depth56_fixed`). |
 | **Step 9 (optional)** | Same as 6–8 but drops **cerebellum + brainstem** (keeps cerebrum, thalamus, hypothalamus). |
-| **Z-score (default)** | **Within each phase**, for **each region**, values are z-scored across all mice in that phase (mean 0, std 1 per region × phase) — same convention as Step 3 representative-region plots. Toggle: `trap_config.m` → `phase_AP_z_within_phase`. Raw density remains in cohort CSVs and in **raw** four-way figures. |
+| **Z-score vs raw (Steps 6–10)** | Steps **6–9** and **10** write **two parallel trees**: **`raw_cells_mm3/`** (cells/mm³) and **`z_within_phase/`** (within-phase z per region across mice — same convention as Step 3 rep-region z). `phase_AP_z_within_phase` does **not** select a single tree. Cohort CSVs stay raw; four-way figures still include **both** raw and z panels where applicable. |
 
 ---
 
@@ -85,8 +85,8 @@ Those are **different scientific questions**. **Top-region lists do not need to 
 | **Step 3 v2** | Samples embedded (e.g. PCA/k-means); **representative regions** per cluster | Clustering silhouette; **within-phase z** plots for Active vs Passive side-by-side. |
 | **Step 4 flip** | **Condition A/B/C**: e.g. Reinstatement (A−P) and Withdrawal (A−P) must satisfy a **joint sign/magnitude pattern** | Region lists + permutation-style summaries; **not** the same ranking as single-phase A vs P. |
 | **Steps 6–7** | **Within Reinstatement only** or **within Withdrawal only**: Active mice vs Passive mice **per region** | **Wilcoxon rank-sum (`ranksum`)** on **all mouse values** (one dot per mouse). With z-scale on, ranks (and thus **p-values**) match raw-scale ranksum per region; means/figures are in **z**. Optional **FDR** (Benjamini–Hochberg/BY) across regions. |
-| **Step 8** | Same delivery (Active **or** Passive): **Reinstatement mice vs Withdrawal mice** per region | **Wilcoxon rank-sum** on mouse-level values; y-axis z when z-mode is on (see `README_zscale_Step8.txt`). |
-| **Step 6b screening** | How much **(A−P) in Rein** differs from **(A−P) in With** per region | **\|d_Rein − d_With\|** (exploratory; not a formal interaction test per region). |
+| **Step 8** | Same delivery (Active **or** Passive): **Reinstatement mice vs Withdrawal mice** per region | **Wilcoxon rank-sum** on mouse-level values; use **`z_within_phase/`** or **`raw_cells_mm3/`** folder for axis units. |
+| **Step 6b screening** | How much **(A−P) in Rein** differs from **(A−P) in With** per region | **\|d_Rein − d_With\|** under each scale folder (exploratory; not a formal interaction test per region). |
 
 **Aligning Step 3 and Steps 6–9:** use `v2_sample_source = 'manifest'` in `trap_config.m` so the **same mice columns** enter Step 3 v2 and Step 6–8. See `STEP_CONSISTENCY_3_vs_6_8.md`.
 
@@ -103,7 +103,7 @@ Those are **different scientific questions**. **Top-region lists do not need to 
 | **Exclude 제거** | phase=Exclude 샘플은 Step 6–9 전에 제거(옵션, Step 3 매니페스트 흐름과 맞춤). |
 | **영역 부분집합** | Step 6–9는 Step 3과 같은 **depth/계층 규칙**으로 영역 제한 가능. |
 | **Step 9** | 6–8과 동일하되 **소뇌+뇌간(시상·시상하 제외 뇌간)** 제거, 대뇌+시상+시상하만. |
-| **Z-score (기본)** | **phase마다**, **영역마다** 그 phase 마우스들로 평균 0·표준편차 1 (Step 3 대표영역 z 플롯과 동일). 끄려면 `phase_AP_z_within_phase = false`. Raw는 CSV 및 four-way **raw** 그림에 유지. |
+| **Z vs raw (Step 6–10)** | **`raw_cells_mm3/`** 와 **`z_within_phase/`** 에 **같은 구조로 이중 저장**. Step 3 대표영역 z와 같은 정의는 **z_within_phase** 트리. `phase_AP_z_within_phase`로 한쪽만 선택하지 않음. |
 
 ---
 
@@ -116,8 +116,8 @@ Those are **different scientific questions**. **Top-region lists do not need to 
 | **Step 3 v2** | 표본 임베딩·k-means·**클러스터별 대표 영역** | 실루엣 등; **phase 내 z** 후 Active vs Passive 막대/산점. |
 | **Step 4 flip** | **Condition A/B/C**: Rein·With **동시에** 만족하는 A−P **부호/크기 패턴** | 영역 목록·순열 요약; **한 phase만의 A vs P 상위 목록과 다를 수 있음**. |
 | **Step 6–7** | **Rein만** 또는 **With만** 안에서 Active 마우스 vs Passive 마우스 (**영역별**) | **Wilcoxon rank-sum**: 마우스당 한 점. z 사용 시 **순위·p는 raw와 동일**, 표시는 **z**. 영역 다중비교 시 **FDR(BH/BY)** 옵션. |
-| **Step 8** | 같은 전달군(Active **또는** Passive)에서 **Rein 마우스 vs With 마우스** | **Wilcoxon rank-sum**. z 모드일 때 y축은 phase 내 z. |
-| **Step 6b** | Rein에서 (A−P)와 With에서 (A−P)의 **차이 크기** | **\|d_Rein − d_With\|** (탐색용). |
+| **Step 8** | 같은 전달군(Active **또는** Passive)에서 **Rein 마우스 vs With 마우스** | **Wilcoxon rank-sum**. 축 단위는 **`z_within_phase/`** 또는 **`raw_cells_mm3/`** 폴더에 맞춤. |
+| **Step 6b** | Rein에서 (A−P)와 With에서 (A−P)의 **차이 크기** | 스케일 폴더마다 **\|d_Rein − d_With\|** (탐색용). |
 
 **Step 3와 Step 6–9 샘플 통일:** `v2_sample_source = 'manifest'` 권장. 자세한 체크리스트는 `STEP_CONSISTENCY_3_vs_6_8.md`.
 
@@ -126,13 +126,13 @@ Those are **different scientific questions**. **Top-region lists do not need to 
 ## 6. Outputs & figure footers / 산출물
 
 - **`TRAP_OUTPUT/`** 아래 단계별 폴더; 많은 PNG는 짝을 이루는 **`.txt`**에 비교·통계 설명이 있음.  
-- Step 6 z 사용 시: **`README_zscale_Step6.txt`**, Step 8: **`README_zscale_Step8.txt`**.  
+- Step 6–8 각 스케일 폴더: **`README_this_scale.txt`** (및 Step 6 **`README_Step6_dual_scales.txt`** 등).  
 - 뇌영역 라벨 예: `B (brainstem)`, `PVT (thalamus)` — `PLOT_REGION_MAJOR_CLASS.md`.
 
 ---
 
 ## 7. One-line summary / 한 줄 요약
 
-**EN:** *Pooled L/R density per mouse → optional filters → within-phase z (default) → region-wise Wilcoxon on mouse values; Step 4 adds cross-phase “flip” rules on top of per-phase effects.*
+**EN:** *Pooled L/R density per mouse → optional filters → Steps 6–10 emit **both** raw and within-phase z trees → region-wise Wilcoxon on mouse values; Step 4 adds cross-phase “flip” rules on top of per-phase effects.*
 
-**KR:** *마우스별 L/R 평균 밀도 → 필터 → phase 내 z(기본) → 영역마다 마우스 값으로 Wilcoxon; Step 4는 phase 간 ‘플립’ 조건으로 한층 다른 선정.*
+**KR:** *마우스별 L/R 평균 밀도 → 필터 → Step 6–10은 raw·z 트리 이중 출력 → 영역마다 마우스 값으로 Wilcoxon; Step 4는 phase 간 ‘플립’ 조건으로 한층 다른 선정.*

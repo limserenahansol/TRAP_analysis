@@ -53,10 +53,10 @@ function RUN_PIPELINE_ALL()
     fprintf('\n========== DONE ==========\n');
     fprintf(['Outputs:\n  Tables + figures: %s (see figures_described/)\n' ...
         '  %s (figures_described/)\n  %s + RepRegions CSV + .mat\n' ...
-        '  %s (figures_described/)\n  %s (A vs P + phase_delta_screening)\n'], ...
+        '  %s (figures_described/)\n  %s/{raw_cells_mm3,z_within_phase}/ (A vs P + phase_delta_screening each)\n'], ...
         C.BRANCH_dir, C.cluster_dir, C.v2_outDir, C.flip_dir, C.phase_AP_root);
-    fprintf('  Step 7: %s\n', fullfile(C.outRoot, '07_directional_AP_scenarios'));
-    fprintf('  Step 8: %s\n', fullfile(C.outRoot, '08_within_group_Rein_vs_Withdrawal_delta'));
+    fprintf('  Step 7: %s/{raw_cells_mm3,z_within_phase}/\n', fullfile(C.outRoot, '07_directional_AP_scenarios'));
+    fprintf('  Step 8: %s/{raw_cells_mm3,z_within_phase}/\n', fullfile(C.outRoot, '08_within_group_Rein_vs_Withdrawal_delta'));
     fprintf('  Step 9: %s\n', fullfile(C.outRoot, '09_forebrain_no_brainstem_cerebellum'));
     fprintf('  Step 10: %s\n', C.phase5_timeline_root);
     fprintf('See WHEN_YOU_ADD_MICE_EN_KR.md and WARNINGS_EXPLAINED_EN_KR.md\n');

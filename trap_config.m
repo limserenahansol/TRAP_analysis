@@ -69,9 +69,8 @@ function C = trap_config()
     C.phase_AP_drop_exclude_samples = true;
     % Step 6–9 bar plots: e.g. "B (brainstem)", "ACA (cerebrum)" via Allen parent walk
     C.phase_AP_plot_major_class = true;
-    % true = same as Step 3 rep-region z: within each phase, z per region across mice
-    % Steps 6–9: if true, tables/volcano/bars use within-phase z. Step 10 always writes BOTH
-    % raw (raw_cells_mm3/) and z (z_within_phase/) — this flag does not pick Step-10 branch.
+    % Legacy / ancillary: Steps 6–9 now always emit raw_cells_mm3/ and z_within_phase/ (this flag is not
+    % used to choose a single output tree). Some shared helpers still read it when no override is passed.
     C.phase_AP_z_within_phase = true;
     C.directional_AP_root = fullfile(C.outRoot, '07_directional_AP_scenarios');  % Step 7
     C.phase_delta_within_group_root = fullfile(C.outRoot, '08_within_group_Rein_vs_Withdrawal_delta');
