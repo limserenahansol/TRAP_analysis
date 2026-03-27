@@ -1,0 +1,20 @@
+What “phase norm” meant in early schematics (clarified)
+=======================================================
+
+1) Phase LABEL canonicalization (always at load)
+   - File: shared/trap_normalize_manifest_phase.m
+   - The manifest “phase” column is turned into a small fixed vocabulary
+     (Baseline, During, Post, Withdrawal, Reinstatement, Exclude, …).
+   - Legacy / alternate spellings map to those names — e.g. “Reexposure”
+     is stored as Reinstatement so all downstream steps use one label.
+   - This does NOT rescale density values; it only standardizes group tags.
+
+2) Within-phase Z-scoring (optional; Steps 6–10 / Step 3 style when enabled)
+   - trap_config.m → phase_AP_z_within_phase (default true in repo).
+   - For each Allen region, densities are z-scored across mice WITHIN each
+     phase label — so comparisons emphasize cross-mouse pattern within a
+     phase, not absolute cells/mm³ scale.
+   - This is separate from (1): labels first, then optional z-transform.
+
+Bilateral pooling (L+R)/2 is unrelated to phase; it runs when building
+the pooled matrix (shared/trap_load_pooled_density_LR.m).
