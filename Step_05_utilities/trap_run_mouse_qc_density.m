@@ -237,9 +237,9 @@ function trap_run_mouse_qc_density(userC)
         trap_ensure_dir(fullfile(branchZ, 'figures_described'));
         trap_ensure_dir(fullfile(branchZ, 'tables'));
         mouse_qc_kmeans_markers(Dkm, NodeKm, maskAll, sampleNames, sampleDpLabs, ...
-            GroupDelivery, GroupPhase, M, branchRaw, ks, pcaDims, tsnePcaDims, fbMsg, false);
+            GroupDelivery, GroupPhase, M, branchRaw, ks, pcaDims, tsnePcaDims, fbMsg, false, C);
         mouse_qc_kmeans_markers(Dkm, NodeKm, maskAll, sampleNames, sampleDpLabs, ...
-            GroupDelivery, GroupPhase, M, branchZ, ks, pcaDims, tsnePcaDims, fbMsg, true);
+            GroupDelivery, GroupPhase, M, branchZ, ks, pcaDims, tsnePcaDims, fbMsg, true, C);
         fprintf('mouse_qc: k-means / PCA / t-SNE (raw)  → %s\n', branchRaw);
         fprintf('mouse_qc: k-means / PCA / t-SNE (z-score) → %s\n', branchZ);
     end
@@ -389,8 +389,9 @@ function outLabs = mouse_qc_join_sample_labels_for_mice(G, nM, sampleDpLabs)
 end
 
 function mouse_qc_kmeans_markers(Dreg, Node, depthMask, sampleNames, sampleDpLabs, ...
-    GroupDelivery, GroupPhase, M, branchRoot, ks, pcaDims, tsnePcaDims, featureNote, useZScoreRegions)
+    GroupDelivery, GroupPhase, M, branchRoot, ks, pcaDims, tsnePcaDims, featureNote, useZScoreRegions, C)
 % K-means, PCA, t-SNE per branch (raw vs z-scored features). branchRoot = output folder for this branch.
+% Region labels on marker barh + CSV: trap_region_plot_tick_labels (same as Steps 6–8: base acronym, major class).
 
     figDir = fullfile(branchRoot, 'figures_described');
     tabDir = fullfile(branchRoot, 'tables');
@@ -499,7 +500,7 @@ function mouse_qc_kmeans_markers(Dreg, Node, depthMask, sampleNames, sampleDpLab
             'K-means unit = manifest sample (column).\n' ...
             'K-means input: %s\n' ...
             'See figures_described: 01_pca_*, 02_tsne_*, pca_PC12_kmeans_*, tsne_kmeans_*, kmeans_*_barh_*.\n' ...
-            'Marker CSVs/bars: Cohen d on raw cells/mm³ (same forebrain rows).\n' ...
+            'Marker CSVs/bars: Cohen d on raw cells/mm³; region_label = acronym (major class), same as Steps 6–8.\n' ...
             'n=%d samples — exploratory only.\n'], ...
             branchTag, char(string(featureNote)), scaleDesc, pcaNote, nS));
     end
@@ -589,15 +590,17 @@ function mouse_qc_kmeans_markers(Dreg, Node, depthMask, sampleNames, sampleDpLab
             [~, ordM] = sort(abs(dCohen), 'descend');
             topN = min(40, nR);
             ix = ordM(1:topN);
-            Tm = table(NodeSub.id(ix), string(NodeSub.acronym(ix)), NodeSub.depth(ix), diff(ix), dCohen(ix), ...
-                'VariableNames', {'region_id', 'acronym', 'depth', 'mean_diff_in_minus_out', 'cohen_d_in_vs_out'});
+            labTop = trap_region_plot_tick_labels(double(NodeSub.id(ix)), NodeSub.acronym(ix), C);
+            Tm = table(NodeSub.id(ix), string(labTop), NodeSub.depth(ix), diff(ix), dCohen(ix), ...
+                'VariableNames', {'region_id', 'region_label', 'depth', 'mean_diff_in_minus_out', 'cohen_d_in_vs_out'});
             writetable(Tm, fullfile(tabDir, sprintf('kmeans_k%d_marker_regions_cluster%d.csv', k, c)));
 
             nShow = min(18, topN);
+            yLabShow = trap_region_plot_tick_labels(double(NodeSub.id(ix(1:nShow))), NodeSub.acronym(ix(1:nShow)), C);
             figure('Color', 'w', 'Position', [40 40 640 max(320, 20 * nShow)]);
             barh(1:nShow, dCohen(ix(1:nShow)), 'FaceColor', [0.55 0.35 0.55]);
             set(gca, 'YDir', 'reverse', 'YTick', 1:nShow, ...
-                'YTickLabel', cellstr(strcat(string(NodeSub.acronym(ix(1:nShow))), " (", string(NodeSub.id(ix(1:nShow))), ")")), ...
+                'YTickLabel', cellstr(string(yLabShow)), ...
                 'TickLabelInterpreter', 'none', 'FontSize', 8);
             xlabel('Cohen''s d (cluster in vs rest)');
             title(sprintf('k=%d cluster %d — top regions by |d| (exploratory)', k, c), 'Interpreter', 'none');
