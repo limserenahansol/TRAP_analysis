@@ -2,7 +2,7 @@
 
 Analysis pipeline for **TRAP whole-brain imaging**: density (cells/mm³) per Allen region, **Active vs Passive**, and **phase**. BRANCH-style stats, PCA/UMAP, k-means, correlations, flip-direction analysis, regionwise statistics, and an optional **five-phase timeline** (Step 10).
 
-**Quick links:** [Roadmap (schematic)](#roadmap-schematic) · [New data checklist](#when-you-have-new-data) · [Steps 1–10](#workflow-steps-1–10-matlab) · [What each figure type means](#what-the-figures-mean) · [Methods EN/KR](#methods--statistics-en--kr--추가-문서)
+**Quick links:** [Roadmap (schematic)](#roadmap-schematic) · [New data checklist](#when-you-have-new-data) · [Steps 0–10](#workflow-steps-0–10-matlab) · [What each figure type means](#what-the-figures-mean) · [Methods EN/KR](#methods--statistics-en--kr--추가-문서)
 
 **Publication schematics (Steps 1–3, PNG):** [`docs/steps_1_2_3_publication_schematics/`](docs/steps_1_2_3_publication_schematics/) — raster figures plus [`PHASE_LABELS_AND_Z.txt`](docs/steps_1_2_3_publication_schematics/PHASE_LABELS_AND_Z.txt) (canonical phase labels at load vs optional within-phase z-scoring).
 
@@ -10,7 +10,7 @@ Analysis pipeline for **TRAP whole-brain imaging**: density (cells/mm³) per All
 
 ## Roadmap (schematic)
 
-High-level order when you run **`init_TRAP_pipeline`** then **`RUN_PIPELINE_ALL`**:
+High-level order when you run **`init_TRAP_pipeline`** then **`RUN_PIPELINE_ALL`** (optional **`trap_run_mouse_qc_density`** for Step 00 first — see [Workflow](#workflow-steps-0–10-matlab)):
 
 ```mermaid
 flowchart TB
@@ -19,6 +19,9 @@ flowchart TB
     CSV["Density CSV(s)<br/>Allen id × samples"]
     CL["TRAP_cohort_CSVs.txt"]
     MAN["TRAP_sample_manifest.csv"]
+  end
+  subgraph S0["0 QC optional"]
+    A0["Step 00 mouse QC<br/>all CSV columns by default"]
   end
   subgraph S1["1–5 Exploration"]
     A1["Step 1 BRANCH<br/>global stats"]
@@ -37,9 +40,12 @@ flowchart TB
   subgraph S3["10 Timeline"]
     B10["Step 10 Five-phase<br/>timeline AP + within"]
   end
+  IN --> A0
   IN --> A1 --> A2 --> A3 --> A4 --> A5
   A5 --> B6 --> B6b --> B7 --> B8 --> B9 --> B10
 ```
+
+**Step 00 vs Steps 1+ (manifest):** **`trap_run_mouse_qc_density`** (default **`C.mouse_qc_use_all_csv_columns = true`**) pools **every numeric sample column** in each cohort export — you do **not** need a manifest row per mouse to include them in QC dendrograms. **`TRAP_sample_manifest.csv`** is optional for Step 00; when present, rows match **`cohort_id` + `column_name`** to label delivery / phase / `mouse_id`. **Steps 1–11** use **`trap_load_pooled_density_LR`**, which loads **only** manifest rows with **`include=1`** (partial cohort is fine — no placeholder rows required).
 
 How **rows and columns** flow into statistics (Steps 6–10 share this loader logic):
 
@@ -72,28 +78,31 @@ Do these **before** or **instead of** a full rerun, depending on what changed.
 |-----------|----------------|
 | New filename or location | **`trap_config.m`** → `C.csvPath` (single-file mode), **and/or** **`TRAP_cohort_CSVs.txt`** (one path per line). |
 | Second (third, …) cohort file | Add a **new line** to **`TRAP_cohort_CSVs.txt`**. Line index = **`cohort_id`** in the manifest. |
-| New mice / new columns | **`TRAP_sample_manifest.csv`** — one row per sample column you want in the analysis. |
+| New mice / new columns | **Steps 1+:** **`TRAP_sample_manifest.csv`** — one row per sample column you want in those steps (`include=1`). **Step 00** can include all CSV columns without new manifest rows (labels `Unknown` until you add rows). |
 | New phase labels (e.g. Baseline, During) | Manifest column **`phase`**. If the spelling is nonstandard, extend **`shared/trap_normalize_manifest_phase.m`**. |
 | Five-phase timeline (Step 10) | Manifest must include samples for **`phase5_phases`** in **`trap_config.m`** (default: Baseline, During, Post, Withdrawal, Reinstatement) and a **baseline** phase for deltas. Details: **[`STEP10_NEW_DATA_FIVE_PHASE_WORKFLOW.md`](STEP10_NEW_DATA_FIVE_PHASE_WORKFLOW.md)**. |
 | Same mice for Step 3 and Steps 6–9 | **`trap_config.m`** → `C.v2_sample_source = 'manifest'`. See **`STEP_CONSISTENCY_3_vs_6_8.md`**. |
 
-### 3. Manifest columns (required)
+### 3. Manifest columns (required for Steps 1–11; optional for Step 00)
 
-For **each** sample column in the CSV(s):
+For **each** sample column you want in **Steps 1+** (statistics, BRANCH, phase AP, …):
 
 - **`cohort_id`** — which line of `TRAP_cohort_CSVs.txt` (1, 2, …), or `1` if only one CSV.
 - **`column_name`** — **exact** header string in that cohort’s CSV.
 - **`delivery`** — e.g. `Active`, `Passive`.
 - **`phase`** — e.g. `Withdrawal`, `Reinstatement`, `Baseline`, … (normalized; see `trap_normalize_manifest_phase.m`).
-- **`include`** — `1` = use, `0` = skip.
+- **`include`** — `1` = use in Steps 1+, `0` = skip.
 
 Optional: **`mouse_id`** (for your notes; the pipeline matches data by **`column_name`** + **`cohort_id`**).
+
+**Step 00 (mouse QC)** does **not** require a complete manifest: with the default **`mouse_qc_use_all_csv_columns`**, every numeric density column in each cohort file is used; add manifest rows when you want delivery/phase labels on those mice.
 
 ### 4. Run MATLAB
 
 ```matlab
 cd('...\TRAP_analysis')   % folder that contains init_TRAP_pipeline.m
 init_TRAP_pipeline
+trap_run_mouse_qc_density   % optional Step 00 — all mice in cohort CSVs by default
 RUN_PIPELINE_ALL
 ```
 
@@ -111,12 +120,13 @@ More detail: **[`WHEN_YOU_ADD_MICE_EN_KR.md`](WHEN_YOU_ADD_MICE_EN_KR.md)** (EN+
 
 ---
 
-## Workflow: Steps 1–10 (MATLAB)
+## Workflow: Steps 0–10 (MATLAB)
 
-Executed in order by **`RUN_PIPELINE_ALL.m`** (after **`init_TRAP_pipeline`**).
+**Step 00** is run manually (`trap_run_mouse_qc_density`). **Steps 1–10** run in order via **`RUN_PIPELINE_ALL.m`** (after **`init_TRAP_pipeline`**).
 
 | Step | What it does | Main outputs under `TRAP_OUTPUT/` (or config paths) |
 |------|----------------|-----------------------------------------------------|
+| **00** | **Mouse QC** — dendrograms / rank / optional k-means; **default: all numeric columns** per cohort CSV; manifest optional for labels. | **`00_mouse_QC_density/`** |
 | **1** | **BRANCH** — whole-brain summaries of Active vs Passive (global / tree / embedding views depending on script). | **`01_BRANCH_tables_and_figures/`** — CSVs + **`figures_described/`** |
 | **2a** | **Clustering sweep** — scan **K**, **silhouette**, **stability**, **sample PCA**. | **`02_clustering_sweep/figures_described/`** |
 | **3** | **Region clustering v2** — phase-aware clustering; builds **`TRAP_downstream_input.mat`** for Step 4. | **`03_region_clustering_v2/`** (+ RepRegions CSVs, figures) |
@@ -208,7 +218,7 @@ Most PNGs live in a **`figures_described/`** folder. For many plots there is a *
 1. **`init_TRAP_pipeline`** once per MATLAB session.
 2. **`trap_config.m`** — `csvPath`, outputs, `runMode`, optional `v2_sample_source`, FDR/raw *p*. (Steps 6–10 always write **`raw_cells_mm3/`** and **`z_within_phase/`**; `phase_AP_z_within_phase` is legacy for helpers without an explicit override.)
 3. **`TRAP_cohort_CSVs.txt`** — one density CSV path per line (cohort 1, 2, …); same `id` universe across files.
-4. **`TRAP_sample_manifest.csv`** — `cohort_id`, `column_name`, `delivery`, `phase`, `include`.
+4. **`TRAP_sample_manifest.csv`** — required for **Steps 1+** (`include=1` rows only; partial cohorts are fine). For **Step 00** with default settings, the file can be absent or incomplete — labels fall back to `Unknown` until you add rows.
 5. **`MOUSE_COHORT.txt`** — optional human notes.
 
 ---

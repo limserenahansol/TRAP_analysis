@@ -9,10 +9,11 @@
 
 ```matlab
 init_TRAP_pipeline
+trap_run_mouse_qc_density   % optional Step 00 — all density columns per cohort CSV by default
 RUN_PIPELINE_ALL
 ```
 
-4. **First-time setup:** edit `trap_config.m` (paths), create `TRAP_cohort_CSVs.txt` and `TRAP_sample_manifest.csv` as in `README.md`.
+4. **First-time setup:** edit `trap_config.m` (paths), create `TRAP_cohort_CSVs.txt`. **`TRAP_sample_manifest.csv`** is required for **Steps 1+** (list only the mice you want there; partial cohort is fine). For **Step 00** alone, the manifest can be missing or incomplete — see `README.md` and `C.mouse_qc_use_all_csv_columns`.
 5. **Run only Steps 6–9 (after 1–5 already done):**
 
 ```matlab
@@ -36,10 +37,11 @@ Outputs go under **`TRAP_OUTPUT/`**.
 
 ```matlab
 init_TRAP_pipeline
+trap_run_mouse_qc_density   % 선택 0단계 — 기본값은 코호트 CSV의 모든 숫자 열
 RUN_PIPELINE_ALL
 ```
 
-4. **처음 한 번:** `trap_config.m`, `TRAP_cohort_CSVs.txt`, `TRAP_sample_manifest.csv` 설정 (`README.md` 참고).
+4. **처음 한 번:** `trap_config.m`, `TRAP_cohort_CSVs.txt` 설정. **매니페스트**는 **1단계 이상**에 필요(원하는 샘플만 `include=1`). **0단계만** 돌릴 때는 매니페스트가 없거나 불완전해도 됨(`README.md`, `C.mouse_qc_use_all_csv_columns` 참고).
 5. **6~9단계만** (1~5 이미 돌린 뒤) 위 코드 블록처럼 각 `trap_run_*` 호출.
 
 결과는 **`TRAP_OUTPUT/`** 아래에 저장됩니다.

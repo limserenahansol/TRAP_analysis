@@ -4,6 +4,9 @@ function RUN_PIPELINE_ALL()
 %   >> cd TRAP_pipeline
 %   >> RUN_PIPELINE_ALL
 %
+%   Step 00 (optional, not called here): trap_run_mouse_qc_density — mouse QC; default loads **all** numeric
+%   sample columns from TRAP_cohort_CSVs.txt (manifest optional for labels). Steps 1+ use manifest include=1 only.
+%
 %   Step 10 = five-phase timeline (trap_run_phase5_timeline_analysis); needs manifest phases
 %   Baseline…Reinstatement (see STEP10_NEW_DATA_FIVE_PHASE_WORKFLOW.md).
 
