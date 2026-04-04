@@ -29,6 +29,10 @@ These steps **never** auto-scan all numeric columns.
 
 **Recommendation:** Each manifest row’s **`column_name`** should be the **density** column for that mouse (e.g. `HaLi_… density (cells/mm^3)`), not the count or volume column.
 
+## Cohort files can have different numbers of atlas rows
+
+Exports may differ slightly in row count (e.g. CSV 1681 rows vs Excel 1677). Step 00 accepts density columns if they match **that file’s** row count; values are aligned to cohort 1’s atlas via `id` when building the pooled matrix (same as `trap_load_pooled_density_LR`).
+
 ## Summary
 
 | | Step 00 (default) | Steps 1–11 |

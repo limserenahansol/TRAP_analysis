@@ -66,7 +66,9 @@ function [densMean, Node, sampleNames, cohortIds, colNames] = trap_load_pooled_d
                 continue;
             end
             v = double(v(:));
-            if numel(v) ~= nRow
+            % Must match **this** cohort table height — cohort 2 can differ from cohort 1 row count;
+            % mapping onto cohort-1 atlas order uses rowMaps{c} later (do not use nRow from cohort 1 here).
+            if numel(v) ~= height(T)
                 continue;
             end
             cohortIds(end + 1, 1) = c; %#ok<AGROW>
