@@ -1,8 +1,9 @@
 function trap_run_mouse_qc_density(userC)
 %TRAP_RUN_MOUSE_QC_DENSITY  Pre-pipeline QC: mouse similarity, delivery×phase labels, optional k-means + region markers.
 %
-%   DEFAULT (mouse_qc_use_all_csv_columns = true): loads **every numeric sample column** in each cohort
-%   file (TRAP_cohort_CSVs.txt). No manifest row is required to **include** a mouse — e.g. all 21 mice from
+%   DEFAULT (mouse_qc_use_all_csv_columns = true): loads **density** sample columns only (header must
+%   contain mouse_qc_density_column_header_substring, default 'density (cells/mm^3)'; skips count/volume/
+%   AVERAGE columns). No manifest row is required to **include** a mouse — e.g. all mice from
 %   two exports appear in Step 00. Optional TRAP_sample_manifest.csv matches cohort_id + column_name to
 %   fill delivery / phase / mouse_id; columns without a row get Unknown labels and leaf = C#__column.
 %   Set mouse_qc_use_all_csv_columns = false to use only manifest include=1 samples (same column set as

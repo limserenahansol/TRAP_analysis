@@ -1,12 +1,14 @@
 function [densMean, Node, sampleNames, cohortIds, colNames] = trap_load_pooled_density_LR_all_csv_columns(C)
-%TRAP_LOAD_POOLED_DENSITY_LR_ALL_CSV_COLUMNS  L+R pool every numeric sample column in each cohort file.
+%TRAP_LOAD_POOLED_DENSITY_LR_ALL_CSV_COLUMNS  L+R pool density sample columns from each cohort file.
 %
-%   Intended for Step 00 (mouse QC): include **all** mice present in TRAP_cohort_CSVs.txt exports without
-%   requiring a manifest row per column. Steps 1+ still use trap_load_pooled_density_LR (manifest-driven).
+%   Intended for Step 00 (mouse QC): include **each mouse's density column** from TRAP_cohort_CSVs.txt exports
+%   without requiring a manifest row per mouse. Steps 1+ still use trap_load_pooled_density_LR (manifest-driven).
 %
-%   Sample columns = table variables that are not Allen metadata (id, name, acronym, parent_structure_id,
-%   depth) and are numeric with one value per atlas row. Column order follows readtable variable order
-%   per cohort (cohort 1 columns, then cohort 2, …).
+%   Typical exports also have **count**, **volume**, and **AVERAGE** columns — those are NOT treated as mice.
+%   Only columns whose name contains C.mouse_qc_density_column_header_substring (default
+%   'density (cells/mm^3)') and does not contain 'average' (case-insensitive) are used. Allen metadata
+%   columns (id, name, acronym, parent_structure_id, depth) are skipped. Order = readtable variable order
+%   per cohort (cohort 1, then cohort 2, …).
 %
 %   Labels (delivery / phase) are filled later by trap_mouse_qc_apply_manifest_labels (optional manifest).
 
@@ -56,6 +58,9 @@ function [densMean, Node, sampleNames, cohortIds, colNames] = trap_load_pooled_d
             if ismember(name, metaCols)
                 continue;
             end
+            if ~local_is_qc_density_sample_column(name, C)
+                continue;
+            end
             v = T.(name);
             if ~(isnumeric(v) || islogical(v))
                 continue;
@@ -71,7 +76,9 @@ function [densMean, Node, sampleNames, cohortIds, colNames] = trap_load_pooled_d
 
     nS = numel(cohortIds);
     if nS < 1
-        error('trap_load_pooled_density_LR_all_csv_columns: no numeric sample columns found (only metadata columns?).');
+        error(['trap_load_pooled_density_LR_all_csv_columns: no density sample columns found. ' ...
+            'Check column names contain "%s" (trap_config.mouse_qc_density_column_header_substring).'], ...
+            local_qc_density_substring(C));
     end
 
     D = nan(nRow, nS);
@@ -123,8 +130,34 @@ function [densMean, Node, sampleNames, cohortIds, colNames] = trap_load_pooled_d
         end
     end
 
-    fprintf(['mouse_qc (all CSV columns): %d sample column(s) from %d cohort file(s) ' ...
-        '(no manifest required to include a mouse).\n'], nS, numel(paths));
+    fprintf(['mouse_qc (density columns only): %d sample column(s) from %d cohort file(s) ' ...
+        '(substring "%s"; no manifest required to include a mouse).\n'], ...
+        nS, numel(paths), local_qc_density_substring(C));
+end
+
+function sub = local_qc_density_substring(C)
+    sub = 'density (cells/mm^3)';
+    if isfield(C, 'mouse_qc_density_column_header_substring') && ~isempty(strtrim(char(string(C.mouse_qc_density_column_header_substring))))
+        sub = char(strtrim(string(C.mouse_qc_density_column_header_substring)));
+    end
+end
+
+function ok = local_is_qc_density_sample_column(name, C)
+    name = char(strtrim(name));
+    if isempty(name)
+        ok = false;
+        return;
+    end
+    must = local_qc_density_substring(C);
+    if ~contains(lower(name), lower(must))
+        ok = false;
+        return;
+    end
+    if contains(lower(name), 'average')
+        ok = false;
+        return;
+    end
+    ok = true;
 end
 
 function s = local_qc_format_id_preview(missIds, nmax)

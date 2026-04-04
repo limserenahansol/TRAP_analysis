@@ -15,8 +15,11 @@ function C = trap_config()
     C.csvPath       = fullfile(root, 'Hansol Lim density channel 561_all.csv');
     C.manifestPath  = fullfile(root, 'TRAP_sample_manifest.csv');
     C.useManifest   = true;   % false = infer delivery/phase from column names (legacy)
-    % Steps 1+ use trap_load_pooled_density_LR (manifest include=1). Step 00: see mouse_qc_use_all_csv_columns.
+    % Steps 1–11: trap_load_pooled_density_LR + manifest (include=1). See STEP00_AND_PIPELINE_COLUMNS.md.
+    % Step 00: density columns only (mouse_qc_density_column_header_substring); manifest optional for labels.
     C.mouse_qc_use_all_csv_columns = true;  % false = QC uses only manifest samples (same as Step 1+ loader)
+    % Exports often have count, density, volume, AVERAGE per mouse — Step 00 uses density columns only.
+    C.mouse_qc_density_column_header_substring = 'density (cells/mm^3)';
 
     C.outRoot       = fullfile(root, 'TRAP_OUTPUT');
     C.BRANCH_dir    = fullfile(C.outRoot, '01_BRANCH_tables_and_figures');

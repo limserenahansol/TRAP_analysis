@@ -2,7 +2,7 @@
 
 Analysis pipeline for **TRAP whole-brain imaging**: density (cells/mm³) per Allen region, **Active vs Passive**, and **phase**. BRANCH-style stats, PCA/UMAP, k-means, correlations, flip-direction analysis, regionwise statistics, and an optional **five-phase timeline** (Step 10).
 
-**Quick links:** [Roadmap (schematic)](#roadmap-schematic) · [New data checklist](#when-you-have-new-data) · [Steps 0–10](#workflow-steps-0–10-matlab) · [What each figure type means](#what-the-figures-mean) · [Methods EN/KR](#methods--statistics-en--kr--추가-문서)
+**Quick links:** [Roadmap (schematic)](#roadmap-schematic) · [New data checklist](#when-you-have-new-data) · [Steps 0–10](#workflow-steps-0–10-matlab) · [**Step 00 vs 1–11: which CSV columns**](STEP00_AND_PIPELINE_COLUMNS.md) · [What each figure type means](#what-the-figures-mean) · [Methods EN/KR](#methods--statistics-en--kr--추가-문서)
 
 **Publication schematics (Steps 1–3, PNG):** [`docs/steps_1_2_3_publication_schematics/`](docs/steps_1_2_3_publication_schematics/) — raster figures plus [`PHASE_LABELS_AND_Z.txt`](docs/steps_1_2_3_publication_schematics/PHASE_LABELS_AND_Z.txt) (canonical phase labels at load vs optional within-phase z-scoring).
 
@@ -45,7 +45,7 @@ flowchart TB
   A5 --> B6 --> B6b --> B7 --> B8 --> B9 --> B10
 ```
 
-**Step 00 vs Steps 1+ (manifest):** **`trap_run_mouse_qc_density`** (default **`C.mouse_qc_use_all_csv_columns = true`**) pools **every numeric sample column** in each cohort export — you do **not** need a manifest row per mouse to include them in QC dendrograms. **`TRAP_sample_manifest.csv`** is optional for Step 00; when present, rows match **`cohort_id` + `column_name`** to label delivery / phase / `mouse_id`. **Steps 1–11** use **`trap_load_pooled_density_LR`**, which loads **only** manifest rows with **`include=1`** (partial cohort is fine — no placeholder rows required).
+**Step 00 vs Steps 1+ (manifest):** **`trap_run_mouse_qc_density`** (default **`C.mouse_qc_use_all_csv_columns = true`**) pools only columns whose headers contain **`mouse_qc_density_column_header_substring`** (default **`density (cells/mm^3)`**), so **count**, **volume**, and **AVERAGE** columns are not treated as mice. You do **not** need a manifest row per mouse for those density columns. **`TRAP_sample_manifest.csv`** is optional for Step 00; when present, rows match **`cohort_id` + `column_name`** to label delivery / phase / `mouse_id`. **Steps 1–11** use **`trap_load_pooled_density_LR`**, which loads **only** manifest rows with **`include=1`** (partial cohort is fine — no placeholder rows required).
 
 How **rows and columns** flow into statistics (Steps 6–10 share this loader logic):
 
@@ -201,6 +201,8 @@ Most PNGs live in a **`figures_described/`** folder. For many plots there is a *
 
 **[`PIPELINE_DATA_STATISTICS_EN_KR.md`](PIPELINE_DATA_STATISTICS_EN_KR.md)** — Mermaid flow, **processing**, **group definitions**, **tests** (Steps 1–9).  
 **[`RUN_MATLAB_AND_GITHUB_EN_KR.md`](RUN_MATLAB_AND_GITHUB_EN_KR.md)** — MATLAB run + GitHub push (EN + KR).
+
+**Step 00 vs Steps 1–11 (density columns vs manifest):** [`STEP00_AND_PIPELINE_COLUMNS.md`](STEP00_AND_PIPELINE_COLUMNS.md)
 
 **Step 10 (five-phase):** [`STEP10_NEW_DATA_FIVE_PHASE_WORKFLOW.md`](STEP10_NEW_DATA_FIVE_PHASE_WORKFLOW.md)
 

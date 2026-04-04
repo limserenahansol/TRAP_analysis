@@ -5,10 +5,16 @@ function [densMean, Node, sampleNames, GroupDelivery, GroupPhase] = trap_load_po
 %   Phase: **Reexposure** in manifest → stored as **Reinstatement** (trap_normalize_manifest_phase).
 %   Acronym still ends in -L; plotted labels strip -L via trap_region_base_name.
 %
-%   TRAP_sample_manifest.csv must list every sample column:
+%   TRAP_sample_manifest.csv must list every sample column you want in Steps 1+:
 %     cohort_id, column_name, delivery, phase, include, …
+%   column_name = exact table header in that cohort file. If exports include count / density / volume per
+%   mouse, list the **density** column for TRAP (e.g. *... density (cells/mm^3)*), not count or volume.
 %   cohort_id = 1 → first line of TRAP_cohort_CSVs.txt, 2 → second file, …
-%   All CSVs must contain the same atlas id column (row order may differ; aligned by id).
+%   Atlas ids: cohort 1 (first file) defines the reference row order. Other cohorts should match;
+%   if C.cohort_require_identical_atlas is false (default), missing ids in a cohort → NaN for those
+%   regions for samples drawn from that file (warning printed). Set cohort_require_identical_atlas true
+%   to error instead (strict same row set in every export).
+%   Default list: TRAP_cohort_CSVs.txt → 561_1st.csv (cohort 1) + 561_2nd.xlsx (cohort 2).
 
     paths = trap_read_cohort_paths(C);
     if ~isfile(C.manifestPath)
@@ -34,6 +40,11 @@ function [densMean, Node, sampleNames, GroupDelivery, GroupPhase] = trap_load_po
     NodeFull = Tref(:, isMeta);
     nRow = height(Tref);
 
+    strictAtlas = true;
+    if isfield(C, 'cohort_require_identical_atlas')
+        strictAtlas = logical(C.cohort_require_identical_atlas);
+    end
+
     rowMaps = cell(1, numel(paths));
     Tcoh = cell(1, numel(paths));
     for c = 1:numel(paths)
@@ -41,8 +52,18 @@ function [densMean, Node, sampleNames, GroupDelivery, GroupPhase] = trap_load_po
         ids = Tcoh{c}.id;
         [ok, loc] = ismember(refIds, ids);
         if ~all(ok)
-            error(['Cohort %d CSV is missing %d atlas ids that exist in cohort 1. ' ...
-                'All exports must use the same Allen structure list.'], c, nnz(~ok));
+            nMiss = nnz(~ok);
+            missIds = refIds(~ok);
+            idPreview = local_format_id_preview(missIds, 24);
+            if strictAtlas
+                error(['Cohort %d is missing %d atlas id(s) that exist in cohort 1. ' ...
+                    'Re-export with the same Allen structure list, or set trap_config.cohort_require_identical_atlas = false. ' ...
+                    'Missing ids: %s'], c, nMiss, idPreview);
+            end
+            warning('TRAP:cohortAtlasMismatch', ...
+                ['Cohort %d (%s) is missing %d / %d atlas ids vs cohort 1. ' ...
+                'Those regions will be NaN for samples from this cohort only. Missing: %s'], ...
+                c, char(paths{c}), nMiss, numel(refIds), idPreview);
         end
         rowMaps{c} = loc;
     end
@@ -70,7 +91,12 @@ function [densMean, Node, sampleNames, GroupDelivery, GroupPhase] = trap_load_po
         if isempty(jcol)
             error('Column not in cohort %d CSV: "%s"', ci, col);
         end
-        D(:, k) = T{loc, jcol};
+        colData = nan(nRow, 1);
+        okRow = loc > 0;
+        if any(okRow)
+            colData(okRow) = T{loc(okRow), jcol};
+        end
+        D(:, k) = colData;
         sampleNames(k) = "C" + string(ci) + "__" + string(M.column_name(k));
         GroupDelivery(k) = string(strtrim(M.delivery(k)));
         GroupPhase(k) = trap_normalize_manifest_phase(M.phase(k));
@@ -101,5 +127,24 @@ function [densMean, Node, sampleNames, GroupDelivery, GroupPhase] = trap_load_po
         else
             densMean(ii, :) = D(idxG, :);
         end
+    end
+end
+
+function s = local_format_id_preview(missIds, nmax)
+    missIds = missIds(:);
+    n = numel(missIds);
+    if n == 0
+        s = '(none)';
+        return;
+    end
+    nshow = min(nmax, n);
+    if isnumeric(missIds)
+        parts = arrayfun(@num2str, missIds(1:nshow), 'UniformOutput', false);
+    else
+        parts = cellstr(string(missIds(1:nshow)));
+    end
+    s = strjoin(parts, ', ');
+    if n > nshow
+        s = [s sprintf(' … (+%d more)', n - nshow)];
     end
 end
