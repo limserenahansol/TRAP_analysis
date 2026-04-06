@@ -13,7 +13,7 @@ function TRAP_region_clusters_by_phase_density_v2()
 %           * Else (no depth-6 / non-layer depth-7 descendants) -> keep
 %             the depth-5 node itself
 %       - Depth-7 nodes whose name contains "layer" are ignored (not used)
-% 4) For each phase (Withdrawal, Reinstatement) separately:
+% 4) For each phase in trap_config.v2_clustering_phases (default: During, Post, Withdrawal, Reinstatement) separately:
 %       - z-score across samples (region-wise)
 %       - k-means on regions (K=4)
 %       - UMAP (if available) or PCA embedding
@@ -86,6 +86,8 @@ else
     fprintf("Using %d samples after Exclude filter.\n", nSamples);
     csvPath = strjoin(paths, ' | ');
 end
+
+trap_v2_print_phase_table(GroupDelivery, GroupPhase);
 
 acLR = string(NodeLR.acronym);
 acLR = erase(acLR, "-L");
@@ -211,13 +213,23 @@ NodeSel.parent_d4_acronym = parentD4;
 
 figDir = C.v2_figDir;
 if ~exist(figDir, 'dir'), mkdir(figDir); end
+if isfield(C, 'v2_clustering_phases') && ~isempty(C.v2_clustering_phases)
+    phReadme = strjoin(string(C.v2_clustering_phases), ', ');
+else
+    phReadme = 'During, Post, Withdrawal, Reinstatement';
+end
 trap_write_folder_readme(figDir, 'STEP 3 — Region clustering v2 (figures)', ...
     sprintf(['Each region = one brain area: %s. L/R hemispheres averaged per region (see trap_load_pooled_density_LR).\n' ...
-    'Each phase analyzed separately. UMAP: install run_umap; else PCA.\n' ...
-    'Tables (RepRegions CSV, .mat) are in: %s\n'], depthRuleLabel, outDir));
+    'Phases plotted: %s (trap_config.v2_clustering_phases). Each phase analyzed separately. UMAP: install run_umap; else PCA.\n' ...
+    'If a phase has <2 samples it is skipped. Legacy all_csv only labels Withdrawal/Reinstatement from filenames — use manifest for During/Post.\n' ...
+    'Tables (RepRegions CSV, .mat) are in: %s\n'], depthRuleLabel, phReadme, outDir));
 
 %% 4. Phase-wise region clustering and plots
-phasesToUse = ["Withdrawal","Reinstatement"];
+if isfield(C, 'v2_clustering_phases') && ~isempty(C.v2_clustering_phases)
+    phasesToUse = string(C.v2_clustering_phases(:))';
+else
+    phasesToUse = ["During", "Post", "Withdrawal", "Reinstatement"];
+end
 
 for ph = phasesToUse
     fprintf("\n--- Phase: %s ---\n", ph);
@@ -426,6 +438,9 @@ downData.depth_rule_description = depthRuleLabel;
 if isfield(C, 'v2_sample_source')
     downData.v2_sample_source = C.v2_sample_source;
 end
+if isfield(C, 'v2_clustering_phases') && ~isempty(C.v2_clustering_phases)
+    downData.v2_clustering_phases = C.v2_clustering_phases;
+end
 
 save(fullfile(outDir, "TRAP_downstream_input.mat"), "-struct", "downData");
 fprintf("Saved downstream input: %s\n", fullfile(outDir,"TRAP_downstream_input.mat"));
@@ -433,7 +448,26 @@ fprintf("Saved downstream input: %s\n", fullfile(outDir,"TRAP_downstream_input.m
 end
 
 %% =====================================================================
-% Helper: group assignment (Delivery & Phase)
+function trap_v2_print_phase_table(GroupDelivery, GroupPhase)
+    fprintf('\n--- Step 3 v2: samples per phase (after load) ---\n');
+    cats = unique(GroupPhase, 'stable');
+    for i = 1:numel(cats)
+        ph = cats(i);
+        m = GroupPhase == ph;
+        na = nnz(m & GroupDelivery == "Active");
+        np = nnz(m & GroupDelivery == "Passive");
+        fprintf('  %s: total=%d | Active=%d | Passive=%d\n', ph, nnz(m), na, np);
+    end
+    nu = nnz(GroupPhase == "Unknown");
+    if nu > 0
+        fprintf(['  Unknown: %d samples (legacy all_csv: not 7597 / Rein filename patterns). ' ...
+            'Set v2_sample_source=''manifest'' for During/Post/Baseline labels.\n'], nu);
+    end
+    fprintf('\n');
+end
+
+%% =====================================================================
+% Helper: group assignment (Delivery & Phase) — unused; legacy is trap_assign_groups_phase_legacy
 %% =====================================================================
 function [GroupA, GroupB] = assign_groups_phase(sampleNames)
 n = numel(sampleNames);

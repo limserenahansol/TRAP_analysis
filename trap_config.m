@@ -41,6 +41,7 @@ function C = trap_config()
     % v2 samples: 'manifest' = only manifest (matches Steps 6–9). 'all_csv' = extra CSV columns.
     % For identical mice vs Step 6–9, use: v2_sample_source = 'manifest'
     C.v2_sample_source = 'all_csv';
+    C.v2_clustering_phases = ["During", "Post", "Withdrawal", "Reinstatement"];
 
     %% --- BRANCH / stats ---
     C.fdrMethod     = 'BH';    % 'BH' (Benjamini–Hochberg) or 'BY' (Benjamini–Yekutieli, conservative under dependence)
