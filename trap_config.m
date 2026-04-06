@@ -93,6 +93,7 @@ function C = trap_config()
     C.phase5_topN_questions = 25;
     C.phase5_run_forebrain_duplicate = true;
     C.phase5_timeline_forebrain_root = fullfile(C.outRoot, '11_five_phase_timeline_forebrain_gray');
+    C.phase5_triple_scenario_topN = [];  % empty = use phase_AP_topN_direction_only for triple-scenario top-N lists
 
     %% 'quick' = faster pipeline test; 'full' = bootstrap + more permutations
     C.runMode = 'full';

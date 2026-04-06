@@ -108,7 +108,7 @@ function phase5_run_one_root(C)
         'Cross-group: ranksum per region within each phase (same as Step 6).\n' ...
         'Per-phase figures (volcano, tree, mice+SEM, directional top-N) mirror Step 6 layout.\n' ...
         'cross_group_Active_vs_Passive/passive_active_density_ratio/: each phase (Baseline…Reinstatement) — top N lowest mean(Passive)/mean(Active) (extra CSV+barh only; trap_phase_AP_table means; tdTomato+ proxy).\n' ...
-        'cross_group_Active_vs_Passive/triple_scenario_shared_regions/: Scenario1 = During&Post&Withdrawal&Reinstatement all sig A>P; Scenario2 = During&Post&Reinstatement sig A>P and Withdrawal sig P>A (Wilcoxon + trap_phase_AP_pass).\n' ...
+        'cross_group_Active_vs_Passive/triple_scenario_shared_regions/: Scenario1/2 = direction-only mean(A)>mean(P) or P>A per phase, intersect IDs, then top N by |Reinstatement Δ| (no p-value filter; trap_config.phase5_triple_scenario_topN).\n' ...
         'Heatmap 02_* is always row-wise z across phase columns (pattern shape), built from that scale''s phase means.\n'], ...
         strjoin(phases, ', '), bPh);
     if isfield(C, 'phase_AP_row_filter_fn') && ~isempty(C.phase_AP_row_filter_fn)
@@ -335,7 +335,7 @@ function phase5_run_one_root(C)
             fprintf(fidq, 'Q3 (cross-group peak phase): %s (see cross_group_.../tables/cross_group_which_phase_strongest_AP.csv)\n', peakPhaseCross);
             fprintf(fidq, 'Q4: see cross_group_.../tables/top*_between_group_at_peak_phase_*.csv and figures_described barh.\n');
             fprintf(fidq, 'P/A mean-density ratio: cross_group_.../passive_active_density_ratio/ (each phase; lowest mean_P/mean_A; trap_config.phase5_pa_ratio_*).\n');
-            fprintf(fidq, 'Triple scenarios (During+Post+Withdrawal+Reinstatement shared): cross_group_.../triple_scenario_shared_regions/ (Scenario1 vs 2; README in each folder).\n');
+            fprintf(fidq, 'Triple scenarios: cross_group_.../triple_scenario_shared_regions/ — direction-only intersection, top N by |Reinstatement mean(A−P)| (see README in each folder).\n');
             fclose(fidq);
         end
 
@@ -352,6 +352,13 @@ function phase5_run_one_root(C)
 end
 
 function phase5_triple_scenario_shared(cg, Tcell, phases, C, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP)
+    ntop = 25;
+    if isfield(C, 'phase_AP_topN_direction_only')
+        ntop = max(1, round(double(C.phase_AP_topN_direction_only)));
+    end
+    if isfield(C, 'phase5_triple_scenario_topN') && ~isempty(C.phase5_triple_scenario_topN)
+        ntop = max(1, round(double(C.phase5_triple_scenario_topN)));
+    end
     phStr = string(phases);
     jDur = find(strcmpi(phStr, "During"), 1);
     jPost = find(strcmpi(phStr, "Post"), 1);
@@ -366,41 +373,53 @@ function phase5_triple_scenario_shared(cg, Tcell, phases, C, Cp, densWork, Group
     Tpost = Tcell{jPost};
     Tw = Tcell{jWith};
     Trein = Tcell{jRein};
-    [sigDurA, ~] = phase5_masks_AP_PA(Tdur, C);
-    [sigPostA, ~] = phase5_masks_AP_PA(Tpost, C);
-    [sigWithA, sigWithP] = phase5_masks_AP_PA(Tw, C);
-    [sigReinA, ~] = phase5_masks_AP_PA(Trein, C);
-    ids1 = Tdur.id(sigDurA);
-    ids1 = intersect(ids1, Tpost.id(sigPostA));
-    ids1 = intersect(ids1, Tw.id(sigWithA));
-    ids1 = intersect(ids1, Trein.id(sigReinA));
-    ids2 = Tdur.id(sigDurA);
-    ids2 = intersect(ids2, Tpost.id(sigPostA));
-    ids2 = intersect(ids2, Tw.id(sigWithP));
-    ids2 = intersect(ids2, Trein.id(sigReinA));
+    [ids1, nFull1] = phase5_triple_dir_intersect_topn(Tdur, Tpost, Tw, Trein, true, ntop);
+    [ids2, nFull2] = phase5_triple_dir_intersect_topn(Tdur, Tpost, Tw, Trein, false, ntop);
     base = fullfile(cg, 'triple_scenario_shared_regions');
     trap_ensure_dir(base);
     s1 = fullfile(base, 'Scenario1_DuringPost_AP__Withdrawal_AP__Reinstatement_AP');
     s2 = fullfile(base, 'Scenario2_DuringPost_AP__Withdrawal_PA__Reinstatement_AP');
-    phase5_triple_scenario_one(s1, ids1, ...
-        ['Scenario 1: During sig A>P & Post sig A>P & Withdrawal sig A>P & Reinstatement (re-exposure) sig A>P. ' ...
-        'Intersection = regions satisfying all four (same criterion as Step 6–7 directional tests).'], ...
-        Tdur, Tpost, Tw, Trein, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP);
-    phase5_triple_scenario_one(s2, ids2, ...
-        ['Scenario 2: During sig A>P & Post sig A>P & Withdrawal sig P>A & Reinstatement sig A>P. ' ...
-        'Intersection = regions satisfying all four.'], ...
-        Tdur, Tpost, Tw, Trein, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP);
-    fprintf('Phase-5 triple scenarios → %s | Scenario1 n=%d | Scenario2 n=%d\n', base, numel(ids1), numel(ids2));
+    hdr1 = sprintf(['Scenario 1 (direction only, no p-value filter): During mean(A)>mean(P), Post A>P, Withdrawal A>P, ' ...
+        'Reinstatement A>P. Intersect region IDs, then keep top %d by |mean(A)−mean(P)| in Reinstatement ' ...
+        '(among %d regions in the full intersection).'], ntop, nFull1);
+    hdr2 = sprintf(['Scenario 2 (direction only): During A>P, Post A>P, Withdrawal P>A (mean(P)>mean(A)), ' ...
+        'Reinstatement A>P. Intersect, then top %d by |Reinstatement Δ| (full intersection count = %d).'], ntop, nFull2);
+    phase5_triple_scenario_one(s1, ids1, hdr1, Tdur, Tpost, Tw, Trein, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP, ntop, nFull1);
+    phase5_triple_scenario_one(s2, ids2, hdr2, Tdur, Tpost, Tw, Trein, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP, ntop, nFull2);
+    fprintf('Phase-5 triple scenarios → %s | S1 top%d (full∩=%d) | S2 top%d (full∩=%d)\n', ...
+        base, numel(ids1), nFull1, numel(ids2), nFull2);
 end
 
-function [sigA, sigP] = phase5_masks_AP_PA(T, C)
-    pass = trap_phase_AP_pass(T, C);
-    md = T.mean_Active_minus_Passive;
-    sigA = pass & md > 0 & ~isnan(T.p_AP);
-    sigP = pass & md < 0 & ~isnan(T.p_AP);
+function [idsTop, nFull] = phase5_triple_dir_intersect_topn(Tdur, Tpost, Tw, Trein, withdrawalWantsAP, ntop)
+% Direction only: finite mean_Active_minus_Passive; Withdrawal uses A>P if withdrawalWantsAP, else P>A.
+    mdD = Tdur.mean_Active_minus_Passive;
+    mdPo = Tpost.mean_Active_minus_Passive;
+    mdW = Tw.mean_Active_minus_Passive;
+    mdR = Trein.mean_Active_minus_Passive;
+    okD = isfinite(mdD) & mdD > 0;
+    okPo = isfinite(mdPo) & mdPo > 0;
+    if withdrawalWantsAP
+        okW = isfinite(mdW) & mdW > 0;
+    else
+        okW = isfinite(mdW) & mdW < 0;
+    end
+    okR = isfinite(mdR) & mdR > 0;
+    ids = intersect(Tdur.id(okD), Tpost.id(okPo));
+    ids = intersect(ids, Tw.id(okW));
+    ids = intersect(ids, Trein.id(okR));
+    nFull = numel(ids);
+    if isempty(ids)
+        idsTop = [];
+        return;
+    end
+    [~, ir] = ismember(ids, Trein.id);
+    scr = abs(mdR(ir));
+    [~, o] = sort(scr, 'descend');
+    nk = min(ntop, numel(o));
+    idsTop = ids(o(1:nk));
 end
 
-function phase5_triple_scenario_one(outDir, ids, readmeBody, Tdur, Tpost, Tw, Trein, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP)
+function phase5_triple_scenario_one(outDir, ids, readmeBody, Tdur, Tpost, Tw, Trein, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP, ntopReport, nFullIntersect)
     fd = fullfile(outDir, 'figures_described');
     td = fullfile(outDir, 'tables');
     trap_ensure_dir(fd);
@@ -411,13 +430,22 @@ function phase5_triple_scenario_one(outDir, ids, readmeBody, Tdur, Tpost, Tw, Tr
         Tids = table(ids(:), 'VariableNames', {'id'});
     end
     writetable(Tids, fullfile(td, 'shared_region_ids.csv'));
+    fidn = fopen(fullfile(td, 'intersection_full_region_count.txt'), 'w');
+    if fidn > 0
+        fprintf(fidn, '%d\n', nFullIntersect);
+        fclose(fidn);
+    end
     Tdet = phase5_triple_scenario_detail_table(ids, Tdur, Tpost, Tw, Trein);
     if height(Tdet) >= 1
         writetable(Tdet, fullfile(td, 'shared_regions_AP_stats_by_phase.csv'));
     end
     fid = fopen(fullfile(td, 'README_criteria.txt'), 'w');
     if fid > 0
-        fprintf(fid, '%s\n\nWilcoxon rank-sum per region per phase; significance = trap_phase_AP_pass (same as Step 6).\n', readmeBody);
+        fprintf(fid, '%s\n\n', readmeBody);
+        fprintf(fid, ['Direction = mean(Active)−mean(Passive) per region (no p-value requirement). ' ...
+            'Rank by |Reinstatement Δ|; output lists top %d IDs (full intersection before cap: %d regions).\n' ...
+            'p/q columns in CSV are descriptive Wilcoxon stats (same as Step 6 tables).\n'], ...
+            ntopReport, nFullIntersect);
         fclose(fid);
     end
     phList = ["During", "Post", "Withdrawal", "Reinstatement"];
@@ -428,7 +456,12 @@ function phase5_triple_scenario_one(outDir, ids, readmeBody, Tdur, Tpost, Tw, Tr
         slug = matlab.lang.makeValidName(char(strrep(phList(ii), ' ', '_')));
         png = fullfile(fd, sprintf('%02d_mice_sem_%s.png', ii, slug));
         if isempty(ids)
-            trap_export_placeholder_figure(png, char(phList(ii)), 'No shared regions (n=0).');
+            if nFullIntersect < 1
+                msg = 'No regions (n=0): no ID satisfies all four phase directions at once — see README_criteria.txt.';
+            else
+                msg = 'No IDs in output list (check top-N cap).';
+            end
+            trap_export_placeholder_figure(png, char(phList(ii)), msg);
         else
             Tsub = trap_table_rows_for_ids(Tlist{ii}, ids);
             trap_phase_plot_AP_bars_sem_mice(densWork, GroupDelivery, GroupPhase, phList(ii), Node, Tsub, ...
