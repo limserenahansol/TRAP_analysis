@@ -11,6 +11,8 @@ Exports often repeat **one mouse** across several columns:
 
 ## Step 00 (`trap_run_mouse_qc_density`)
 
+If the manifest lists a sample with **`include=0`**, that column is **dropped** in Step 00 (same intent as Steps 1+).
+
 With default **`C.mouse_qc_use_all_csv_columns = true`**, Step 00 **does not** treat every numeric column as a mouse.
 
 - It keeps only columns whose name **contains** **`C.mouse_qc_density_column_header_substring`** (default: `density (cells/mm^3)`), **case-insensitive**.

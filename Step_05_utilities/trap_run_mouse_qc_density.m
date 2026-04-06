@@ -5,7 +5,8 @@ function trap_run_mouse_qc_density(userC)
 %   contain mouse_qc_density_column_header_substring, default 'density (cells/mm^3)'; skips count/volume/
 %   AVERAGE columns). No manifest row is required to **include** a mouse — e.g. all mice from
 %   two exports appear in Step 00. Optional TRAP_sample_manifest.csv matches cohort_id + column_name to
-%   fill delivery / phase / mouse_id; columns without a row get Unknown labels and leaf = C#__column.
+%   fill delivery / phase / mouse_id; if a row exists with include=0, that sample is dropped (same rule
+%   as Steps 1+). Columns without a manifest row get Unknown labels and leaf = C#__column.
 %   Set mouse_qc_use_all_csv_columns = false to use only manifest include=1 samples (same column set as
 %   trap_load_pooled_density_LR — for parity with Steps 1+ when the manifest is incomplete).
 %
@@ -68,6 +69,21 @@ function trap_run_mouse_qc_density(userC)
     if useAllCsv
         [densMean, Node, sampleNames, cohortIds, colNames] = trap_load_pooled_density_LR_all_csv_columns(C);
         [GroupDelivery, GroupPhase, M] = trap_mouse_qc_apply_manifest_labels(C, cohortIds, colNames);
+        keepInc = trap_mouse_qc_manifest_include_keep_mask(C, cohortIds, colNames);
+        if any(~keepInc)
+            nDrop = nnz(~keepInc);
+            fprintf('mouse_qc: dropped %d sample(s) with manifest include=0 (not used in Step 00).\n', nDrop);
+            densMean = densMean(:, keepInc);
+            sampleNames = sampleNames(keepInc);
+            cohortIds = cohortIds(keepInc);
+            colNames = colNames(keepInc);
+            GroupDelivery = GroupDelivery(keepInc);
+            GroupPhase = GroupPhase(keepInc);
+            M = M(keepInc, :);
+            if size(densMean, 2) < 1
+                error('mouse_qc: all samples excluded by manifest include=0.');
+            end
+        end
     else
         [densMean, Node, sampleNames, GroupDelivery, GroupPhase] = trap_load_pooled_density_LR(C);
         M = trap_read_manifest(C.manifestPath);
