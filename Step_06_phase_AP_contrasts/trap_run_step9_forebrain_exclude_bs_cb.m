@@ -23,25 +23,15 @@ function trap_run_step9_forebrain_exclude_bs_cb()
     fid = fopen(fullfile(base, 'README_Step9.txt'), 'w');
 
     if fid > 0
-
-        fprintf(fid, '%s', [ ...
-
-            'Step 9 = Steps 6–8 + phase-delta screening; forebrain gray-matter filter; **z and raw** in separate folders.\n' ...
-
+        % One horizontal [str str ...] — no blank lines inside brackets or MATLAB stacks rows (vertcat) and errors.
+        msg = [ 'Step 9 = Steps 6-8 + phase-delta screening; forebrain gray-matter filter; **z and raw** in separate folders.\n' ...
             '  step6_phase_ActivePassive_zscale + step6_phase_ActivePassive_raw_density\n' ...
-
             '  step7_zscale + step7_raw_density | step8_zscale + step8_raw_density\n' ...
-
             '  phase_delta_screening/ under each step6 folder.\n' ...
-
             'Filter: trap_AP_filter_forebrain_exclude_fiber_wm (atlas forebrain + fiber tracts / WM).\n' ...
-
-            'Canonical reference: Desktop\\TRAP_pipeline (same folder names and dual-scale loop).\n' ...
-
-            ]);
-
+            'Canonical reference: Desktop\\TRAP_pipeline (same folder names and dual-scale loop).\n' ];
+        fprintf(fid, '%s', msg);
         fclose(fid);
-
     end
 
 
