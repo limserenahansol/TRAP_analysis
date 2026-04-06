@@ -9,17 +9,28 @@ function C = trap_config()
     C.root = root;
 
     %% --- Input / output ---
-    % Multi-cohort: TRAP_cohort_CSVs.txt = one CSV path per line (1st line = cohort 1, …).
-    % If that file is missing, single-file mode uses csvPath only.
+    % Multi-cohort: TRAP_cohort_CSVs.txt = one CSV or .xlsx per line (line 1 = cohort_id 1, …).
+    % Default cohorts (repo root):  Hansol Lim density channel 561_1st.csv  +  Lim density channel 561_2nd.xlsx
+    % Steps 1–11: trap_load_pooled_density_LR + manifest (include=1 rows only).
+    % Step 00 (mouse QC): default loads density columns only (mouse_qc_density_column_header_substring);
+    % manifest optional for labels. See STEP00_AND_PIPELINE_COLUMNS.md.
+    % If TRAP_cohort_CSVs.txt is missing, single-file mode uses csvPath only.
     C.cohortListFile = fullfile(root, 'TRAP_cohort_CSVs.txt');
-    C.csvPath       = fullfile(root, 'Hansol Lim density channel 561_all.csv');
+    C.csvPath       = fullfile(root, 'Hansol Lim density channel 561_1st.csv');
     C.manifestPath  = fullfile(root, 'TRAP_sample_manifest.csv');
     C.useManifest   = true;   % false = infer delivery/phase from column names (legacy)
-    % Steps 1–11: trap_load_pooled_density_LR + manifest (include=1). See STEP00_AND_PIPELINE_COLUMNS.md.
-    % Step 00: density columns only (mouse_qc_density_column_header_substring); manifest optional for labels.
-    C.mouse_qc_use_all_csv_columns = true;  % false = QC uses only manifest samples (same as Step 1+ loader)
-    % Exports often have count, density, volume, AVERAGE per mouse — Step 00 uses density columns only.
+    % Multi-cohort: if false, a cohort may omit some Allen ids present in cohort 1 — those cells are NaN for that cohort's samples only.
+    % If true, every cohort file must list the same ids as cohort 1 (strict).
+    C.cohort_require_identical_atlas = false;
+
+    %% --- Step 00: mouse QC (trap_run_mouse_qc_density) — run before/parallel to main pipeline ---
+    % true (default) = auto-pick sample columns from each cohort file (no manifest row required per mouse).
+    % false = same sample set as Steps 1+ (manifest, include=1 only).
+    C.mouse_qc_use_all_csv_columns = true;
+    % Exports often have count, density, volume, AVERAGE… per mouse — only **density** columns are mice.
+    % Column header must contain this substring (case-insensitive). Rows with "average" in the name are skipped.
     C.mouse_qc_density_column_header_substring = 'density (cells/mm^3)';
+    % K-means sweep in mouse QC (each k must be < n samples).
     C.mouse_qc_kmeans_ks = [2, 3, 4];
 
     C.outRoot       = fullfile(root, 'TRAP_OUTPUT');
@@ -41,6 +52,8 @@ function C = trap_config()
     % v2 samples: 'manifest' = only manifest (matches Steps 6–9). 'all_csv' = extra CSV columns.
     % For identical mice vs Step 6–9, use: v2_sample_source = 'manifest'
     C.v2_sample_source = 'all_csv';
+    % Step 3 v2 figures (embedding, RAW rep regions, z-scored rep regions): which phases to run (each needs >=2 samples).
+    % Legacy all_csv uses trap_assign_groups_phase_legacy — only Withdrawal (7597*) and Reinstatement patterns; During/Post stay "Unknown" unless you extend that helper or use manifest.
     C.v2_clustering_phases = ["During", "Post", "Withdrawal", "Reinstatement"];
 
     %% --- BRANCH / stats ---
@@ -83,18 +96,29 @@ function C = trap_config()
     C.phase_delta_within_group_root = fullfile(C.outRoot, '08_within_group_Rein_vs_Withdrawal_delta');
     % Optional: function_handle @(d,N,c)trap_AP_filter_*(d,N,c) — Step 9 sets this
     C.phase_AP_row_filter_fn = [];
+    % When true, Steps 6/7/8/phase_delta_screening write one scale per call (Step 9 z/raw folders)
+    C.phase_AP_flat_outputs = false;
 
     %% --- Step 10: five-phase timeline (Baseline → … → Reinstatement) ---
     % Requires manifest phases that normalize to C.phase5_phases (see trap_normalize_manifest_phase).
     C.phase5_timeline_root = fullfile(C.outRoot, '10_five_phase_timeline');
     C.phase5_phases = ["Baseline", "During", "Post", "Withdrawal", "Reinstatement"];
     C.phase5_baseline_phase = "Baseline";
+    % Within-group Q1 (Step 10/11): 'auto' uses baseline column if it has mice & finite means; else leave-one-out vs other phases.
+    % 'baseline' | 'leave_one_out' force that reference (use LOO when you have no baseline timepoint).
+    C.phase5_within_group_reference = 'auto';
     C.phase5_topN_heatmap = 50;
     C.phase5_topN_lineplot = 12;
     C.phase5_topN_questions = 25;
     C.phase5_run_forebrain_duplicate = true;
     C.phase5_timeline_forebrain_root = fullfile(C.outRoot, '11_five_phase_timeline_forebrain_gray');
-    C.phase5_triple_scenario_topN = [];  % empty = use phase_AP_topN_direction_only for triple-scenario top-N lists
+    % true = only regenerate Step 11 folder (forebrain filter); skip Step 10 unfiltered timeline
+    C.phase5_skip_unfiltered_timeline = false;
+    % Step 10/11 triple scenarios: top-N regions (direction-only intersection); default follows phase_AP_topN_direction_only
+    C.phase5_triple_scenario_topN = [];  % empty = use phase_AP_topN_direction_only
+    % Step 10/11: extra plot+CSV only — lowest mean(P)/mean(A) per region (tdTomato+ proxy); default = every phase5 phase
+    C.phase5_pa_ratio_phases = C.phase5_phases;
+    C.phase5_pa_ratio_topN = 30;
 
     %% 'quick' = faster pipeline test; 'full' = bootstrap + more permutations
     C.runMode = 'full';

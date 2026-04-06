@@ -102,7 +102,7 @@ function phase5_run_one_root(C)
         '  z_within_phase/  — working matrix = within-phase z per region (across mice; Step 3 convention)\n' ...
         'trap_config.phase_AP_z_within_phase does not choose between them for Step 10; both are always written.\n' ...
         'Phases: %s.\nBaseline for within-group deltas: %s.\n' ...
-        'Q1/Q2: within Active or Passive — peak phase = argmax median(|mean(phase)−mean(baseline)|) across regions.\n' ...
+        'Q1/Q2: within Active or Passive — peak phase = argmax median |Δ|; Δ = vs baseline if baseline has data, else vs mean of other phases (leave-one-out). See trap_config.phase5_within_group_reference.\n' ...
         'Q3/Q4: cross-group — peak phase = argmax median(|mean_Active−mean_Passive|) across regions.\n' ...
         'Within-group mice are unpaired across phases unless manifest encodes pairing.\n' ...
         'Cross-group: ranksum per region within each phase (same as Step 6).\n' ...
@@ -159,14 +159,24 @@ function phase5_run_one_root(C)
             trap_ensure_dir(fdir);
 
             [meanMat, cntMat] = regional_means_by_phase(densWork, del, pha, dName, phases);
-            [Tfl, deltaMat] = build_fluctuation_table(Node, meanMat, cntMat, phases, ib);
+            refMode = phase5_resolve_within_ref(C, pha, meanMat, phases, ib);
+            fidrm = fopen(fullfile(tdir, sprintf('within_group_reference_mode_%s.txt', dName)), 'w');
+            if fidrm > 0
+                fprintf(fidrm, '%s\n', refMode);
+                fclose(fidrm);
+            end
+            if strcmp(refMode, 'leave_one_out')
+                fprintf('  Within-group [%s]: reference = leave-one-out (each phase vs mean of other phases)\n', dName);
+            end
+
+            [Tfl, deltaMat] = build_fluctuation_table(Node, meanMat, cntMat, phases, ib, refMode);
 
             writetable(Tfl, fullfile(tdir, 'region_phase_means_and_fluctuation.csv'));
-            phase5_plot_heatmap_delta(Tfl, deltaMat, phases, ib, Node, nTopH, dName, useZ, fdir);
+            phase5_plot_heatmap_delta(Tfl, deltaMat, phases, ib, Node, nTopH, dName, useZ, fdir, refMode);
             phase5_plot_heatmap_rowz(Tfl, meanMat, phases, Node, nTopH, dName, useZ, fdir);
             phase5_plot_lines_topn(Tfl, meanMat, phases, Node, nTopL, dName, useZ, fdir);
 
-            [Tpr, peakJ, peakPh] = phase5_within_phase_ranking_table(deltaMat, phases, ib, cntMat, dName);
+            [Tpr, peakJ, peakPh] = phase5_within_phase_ranking_table(deltaMat, phases, ib, refMode);
             writetable(Tpr, fullfile(tdir, 'within_group_phase_ranking_vs_baseline.csv'));
             peakPhaseWithin(iD) = peakPh;
             fidp = fopen(fullfile(tdir, sprintf('peak_phase_most_changed_vs_baseline_%s.txt', dName)), 'w');
@@ -175,20 +185,20 @@ function phase5_run_one_root(C)
                 fclose(fidp);
             end
             phase5_bar_median_abs_delta_per_phase(Tpr, peakPh, dName, useZ, ...
-                fullfile(fdir, sprintf('04_median_abs_delta_vs_baseline_by_phase_%s.png', dName)));
+                fullfile(fdir, sprintf('04_median_abs_delta_vs_baseline_by_phase_%s.png', dName)), refMode);
 
             dcol = deltaMat(:, peakJ);
-            [Ttop, topIdx] = phase5_topn_table_within(Node, meanMat, phases, ib, peakJ, dcol, nQ);
+            [Ttop, topIdx] = phase5_topn_table_within(Node, meanMat, phases, ib, peakJ, dcol, nQ, refMode);
             if height(Ttop) >= 1
                 writetable(Ttop, fullfile(tdir, sprintf('top%d_regions_at_peak_phase_%s_%s.csv', nQ, peakPh, dName)));
             end
-            ylab = ternary_str(useZ, 'Δ vs baseline (z within-phase)', 'Δ vs baseline (cells/mm³)');
+            [ylab, dlabShort] = phase5_within_ylab_labels(useZ, refMode);
             if height(Ttop) >= 1
                 phase5_barh_region_delta(Ttop, sprintf( ...
-                    'Top %d |Δ vs baseline| — %s — peak phase %s', nQ, dName, peakPh), ...
+                    'Top %d %s — %s — peak phase %s', nQ, dlabShort, dName, peakPh), ...
                     fullfile(fdir, sprintf('05_top%d_barh_delta_peak_%s_%s.png', nQ, peakPh, dName)), ylab);
                 phase5_tree_delta_vs_baseline(Node, dcol, topIdx, sprintf( ...
-                    '%s | peak phase %s | top %d by |Δ vs baseline|', dName, peakPh, nQ), ...
+                    '%s | peak phase %s | top %d %s', dName, peakPh, nQ, dlabShort), ...
                     fullfile(fdir, sprintf('06_tree_top%d_delta_peak_%s_%s.png', nQ, peakPh, dName)));
             end
 
@@ -329,7 +339,7 @@ function phase5_run_one_root(C)
         if fidq > 0
             fprintf(fidq, '%s', readmeSc);
             fprintf(fidq, '\n\n--- Answers ---\n');
-            fprintf(fidq, 'Q1a (within Active): phase with largest median |Δ vs baseline| = %s\n', peakPhaseWithin(1));
+            fprintf(fidq, 'Q1a (within Active): peak phase = %s (tables/within_group_reference_mode_Active.txt = baseline | leave_one_out)\n', peakPhaseWithin(1));
             fprintf(fidq, 'Q1b (within Passive): %s\n', peakPhaseWithin(2));
             fprintf(fidq, 'Q2: see within_*/tables/top*_regions_at_peak_phase_*.csv and figures 05–06.\n');
             fprintf(fidq, 'Q3 (cross-group peak phase): %s (see cross_group_.../tables/cross_group_which_phase_strongest_AP.csv)\n', peakPhaseCross);
@@ -496,12 +506,43 @@ function s = ternary_str(tf, a, b)
     if tf, s = a; else, s = b; end
 end
 
-function [Tpr, peakJ, peakPh] = phase5_within_phase_ranking_table(deltaMat, phases, ib, ~, ~)
+function [ylab, shortLab] = phase5_within_ylab_labels(useZ, refMode)
+    if strcmp(refMode, 'leave_one_out')
+        ylab = ternary_str(useZ, 'Δ vs mean of other phases (z within-phase)', 'Δ vs mean of other phases (cells/mm³)');
+        shortLab = '|Δ vs other phases|';
+    else
+        ylab = ternary_str(useZ, 'Δ vs baseline (z within-phase)', 'Δ vs baseline (cells/mm³)');
+        shortLab = '|Δ vs baseline|';
+    end
+end
+
+function refMode = phase5_resolve_within_ref(C, pha, meanMat, phases, ib)
+    refMode = 'baseline';
+    if isfield(C, 'phase5_within_group_reference') && ~strcmpi(C.phase5_within_group_reference, 'auto')
+        v = lower(strtrim(char(string(C.phase5_within_group_reference))));
+        if ismember(v, {'leave_one_out', 'loo', 'other_phases'})
+            refMode = 'leave_one_out';
+        elseif strcmp(v, 'baseline')
+            refMode = 'baseline';
+        end
+        return;
+    end
+    if nnz(pha == phases(ib)) < 1
+        refMode = 'leave_one_out';
+        return;
+    end
+    bcol = meanMat(:, ib);
+    if ~any(isfinite(bcol(:)))
+        refMode = 'leave_one_out';
+    end
+end
+
+function [Tpr, peakJ, peakPh] = phase5_within_phase_ranking_table(deltaMat, phases, ib, refMode)
     nP = numel(phases);
     medAbs = nan(nP, 1);
     nRegFinite = zeros(nP, 1);
     for j = 1:nP
-        if j == ib
+        if strcmp(refMode, 'baseline') && j == ib
             continue;
         end
         v = abs(deltaMat(:, j));
@@ -509,21 +550,29 @@ function [Tpr, peakJ, peakPh] = phase5_within_phase_ranking_table(deltaMat, phas
         medAbs(j) = median(v(fin), 'omitnan');
         nRegFinite(j) = nnz(fin);
     end
-    rows = find((1:nP)' ~= ib);
-    Tpr = table(phases(rows)', medAbs(rows), nRegFinite(rows), ...
+    if strcmp(refMode, 'baseline')
+        rows = find((1:nP)' ~= ib);
+    else
+        rows = (1:nP)';
+    end
+    Tpr = table(phases(rows), medAbs(rows), nRegFinite(rows), ...
         'VariableNames', {'phase', 'median_abs_delta_vs_baseline', 'n_regions_with_finite_delta'});
     sc = medAbs;
-    sc(ib) = -inf;
-    [mxv, peakJ] = max(sc);
-    if ~isfinite(mxv) || mxv == -inf
-        peakJ = ib;
-        peakPh = phases(ib);
+    if strcmp(refMode, 'baseline')
+        sc(ib) = -inf;
+    end
+    [mxv, peakJ] = max(sc, [], 'omitnan');
+    if ~isfinite(mxv) || isempty(peakJ)
+        fj = find(isfinite(medAbs), 1);
+        if isempty(fj), fj = 1; end
+        peakJ = fj;
+        peakPh = phases(peakJ);
     else
         peakPh = phases(peakJ);
     end
 end
 
-function [Ttop, topIdx] = phase5_topn_table_within(Node, meanMat, phases, ib, peakJ, dcol, nQ)
+function [Ttop, topIdx] = phase5_topn_table_within(Node, meanMat, phases, ib, peakJ, dcol, nQ, refMode)
     nR = height(Node);
     [~, ord] = sort(abs(dcol), 'descend');
     ord = ord(isfinite(dcol(ord)));
@@ -535,7 +584,13 @@ function [Ttop, topIdx] = phase5_topn_table_within(Node, meanMat, phases, ib, pe
     end
     ix = ord(1:nk);
     topIdx(ix) = true;
-    baseCol = meanMat(:, ib);
+    nP = numel(phases);
+    if strcmp(refMode, 'baseline')
+        baseCol = meanMat(:, ib);
+    else
+        oth = setdiff(1:nP, peakJ);
+        baseCol = mean(meanMat(:, oth), 2, 'omitnan');
+    end
     peakCol = meanMat(:, peakJ);
     Ttop = table(Node.id(ix), string(Node.acronym(ix)), Node.depth(ix), ...
         dcol(ix), abs(dcol(ix)), baseCol(ix), peakCol(ix), ...
@@ -602,7 +657,7 @@ function phase5_tree_delta_vs_baseline(Node, dcol, topIdx, titleStr, pngPath)
         'Highlighted = top regions; color ∝ |Δ vs baseline| (proxy via -log10 p for display).');
 end
 
-function phase5_bar_median_abs_delta_per_phase(Tpr, peakPh, dName, useZ, pngPath)
+function phase5_bar_median_abs_delta_per_phase(Tpr, peakPh, dName, useZ, pngPath, refMode)
     if height(Tpr) < 1, return; end
     y = Tpr.median_abs_delta_vs_baseline;
     x = 1:height(Tpr);
@@ -614,12 +669,19 @@ function phase5_bar_median_abs_delta_per_phase(Tpr, peakPh, dName, useZ, pngPath
         bar(ip, y(ip), 'FaceColor', [0.88 0.32 0.18]);
     end
     set(gca, 'XTick', x, 'XTickLabel', cellstr(Tpr.phase), 'TickLabelInterpreter', 'none');
-    ylabel('Median |Δ vs baseline| across regions', 'Interpreter', 'none');
     tU = 'cells/mm³';
     if useZ, tU = 'z within-phase'; end
-    title(sprintf('Within %s — which phase differs most from baseline? (%s)', dName, tU), 'Interpreter', 'none');
+    if strcmp(refMode, 'leave_one_out')
+        ylabel('Median |Δ vs mean of other phases| across regions', 'Interpreter', 'none');
+        title(sprintf('Within %s — which phase differs most from the others? (%s)', dName, tU), 'Interpreter', 'none');
+        sg = 'Tallest median |Δ| vs mean of other phases (leave-one-out); orange = peak phase.';
+    else
+        ylabel('Median |Δ vs baseline| across regions', 'Interpreter', 'none');
+        title(sprintf('Within %s — which phase differs most from baseline? (%s)', dName, tU), 'Interpreter', 'none');
+        sg = 'Tallest median |Δ vs baseline| drives Q1; orange bar = peak phase.';
+    end
     grid on;
-    trap_export_figure(gcf, pngPath, 'Tallest median |Δ| drives Q1; orange bar = peak phase.');
+    trap_export_figure(gcf, pngPath, sg);
     close(gcf);
 end
 
@@ -745,19 +807,33 @@ function [meanMat, cntMat] = regional_means_by_phase(densMean, del, pha, deliver
     end
 end
 
-function [Tfl, deltaMat] = build_fluctuation_table(Node, meanMat, cntMat, phases, ib)
+function [Tfl, deltaMat] = build_fluctuation_table(Node, meanMat, cntMat, phases, ib, refMode)
     nR = size(meanMat, 1);
     nP = numel(phases);
     deltaMat = nan(nR, nP);
-    base = meanMat(:, ib);
-    for j = 1:nP
-        deltaMat(:, j) = meanMat(:, j) - base;
+    if strcmp(refMode, 'baseline')
+        base = meanMat(:, ib);
+        for j = 1:nP
+            deltaMat(:, j) = meanMat(:, j) - base;
+        end
+    else
+        for j = 1:nP
+            oth = setdiff(1:nP, j);
+            if isempty(oth)
+                refLOO = nan(nR, 1);
+            else
+                refLOO = mean(meanMat(:, oth), 2, 'omitnan');
+            end
+            deltaMat(:, j) = meanMat(:, j) - refLOO;
+        end
     end
     fluct = nan(nR, 1);
     phaseMax = strings(nR, 1);
     for i = 1:nR
         d = deltaMat(i, :);
-        d(ib) = nan;
+        if strcmp(refMode, 'baseline')
+            d(ib) = nan;
+        end
         ta = abs(d);
         ta(~isfinite(ta)) = nan;
         [mx, jx] = max(ta, [], 'omitnan');
@@ -784,7 +860,7 @@ function [Tfl, deltaMat] = build_fluctuation_table(Node, meanMat, cntMat, phases
     end
 end
 
-function phase5_plot_heatmap_delta(Tfl, deltaMat, phases, ib, Node, nTop, dName, useZ, fdir)
+function phase5_plot_heatmap_delta(Tfl, deltaMat, phases, ib, Node, nTop, dName, useZ, fdir, refMode)
     ok = isfinite(Tfl.max_abs_delta_from_baseline);
     if nnz(ok) < 1
         return;
@@ -807,11 +883,16 @@ function phase5_plot_heatmap_delta(Tfl, deltaMat, phases, ib, Node, nTop, dName,
         'XTick', 1:numel(phases), 'XTickLabel', cellstr(phases), 'TickLabelInterpreter', 'none', 'FontSize', 8);
     ylab = 'cells/mm³';
     if useZ, ylab = 'z within-phase'; end
-    title(sprintf(['Top %d regions by max |Δ vs baseline| — %s mice | %s\n' ...
-        '(columns = Δ = mean(phase) − mean(baseline); baseline col should be ~0)'], ...
-        numel(idx), dName, ylab), 'Interpreter', 'none', 'FontSize', 10);
+    if strcmp(refMode, 'leave_one_out')
+        sub = sprintf('columns = Δ = mean(phase) − mean(other phases) for that row');
+        sg = sprintf('Heatmap: leave-one-out deviation per region (%s). %s units.', dName, ylab);
+    else
+        sub = sprintf('columns = Δ = mean(phase) − mean(baseline); baseline col ~0');
+        sg = sprintf('Heatmap of mean-phase minus mean-baseline per region (%s). %s units.', dName, ylab);
+    end
+    title(sprintf(['Top %d regions by max |Δ| — %s mice | %s\n' ...
+        '(%s)'], numel(idx), dName, ylab, sub), 'Interpreter', 'none', 'FontSize', 10);
     xlabel('Phase'); ylabel('Region');
-    sg = sprintf('Heatmap of mean-phase minus mean-baseline per region (%s). %s units.', dName, ylab);
     trap_export_figure(gcf, fullfile(fdir, sprintf('01_heatmap_delta_from_baseline_top%d_%s.png', numel(idx), dName)), sg);
     close(gcf);
 end
