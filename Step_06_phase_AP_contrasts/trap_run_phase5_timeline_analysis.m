@@ -1,6 +1,13 @@
 function trap_run_phase5_timeline_analysis(userC)
 %TRAP_RUN_PHASE5_TIMELINE_ANALYSIS  Five-phase TRAP: within-group vs baseline + Active vs Passive per phase.
 %
+%   Step 11 (default ON): same analysis code as Step 10 (phase5_run_one_root), same folder layout under
+%   trap_config.phase5_timeline_forebrain_root (e.g. 11_five_phase_timeline_forebrain_gray), with
+%   phase_AP_row_filter_fn = @trap_AP_filter_forebrain_exclude_fiber_wm — identical logic to Step 9 forebrain
+%   (no brainstem/cerebellum/midbrain outside TH+HY + fiber tract / WM drops). raw_cells_mm3/ + z_within_phase/.
+%
+%   Optional userC.phase5_skip_unfiltered_timeline = true  →  only Step 11 (forebrain) runs (no 10_ folder refresh).
+%
 %   Always writes two parallel trees under phase5_timeline_root:
 %     raw_cells_mm3/   — cells/mm³ (no within-phase z on the working matrix)
 %     z_within_phase/  — within-phase z per region (same convention as Step 3 / phase_AP_z_within_phase)
@@ -11,6 +18,8 @@ function trap_run_phase5_timeline_analysis(userC)
 %     Q2) In that peak phase: top-N regions by |Δ vs baseline| (CSV + bar + tree).
 %     Q3) Between Active and Passive: which phase shows strongest separation (median |mean_A−mean_P|)?
 %     Q4) In that peak phase: top-N regions by |A−P| (CSV + barh).
+%   Lowest P/A mean ratio (added output only): cross_group_Active_vs_Passive/passive_active_density_ratio/
+%     — for each of the five phase5_phases, top N regions with smallest mean(Passive)/mean(Active) (trap_phase_AP_table; CSV + barh).
 %
 %   Cross-group figures per phase mirror Step 6 style: volcano, tree, ALL-sig mice+SEM, top-N directional bars.
 %   If trap_config.phase5_run_forebrain_duplicate (default true), runs again under phase5_timeline_forebrain_root
@@ -22,7 +31,10 @@ function trap_run_phase5_timeline_analysis(userC)
 
     if nargin < 1, userC = []; end
     Cb = trap_AP_merge_user_config(userC);
-    phase5_run_one_root(Cb);
+    skip10 = isfield(Cb, 'phase5_skip_unfiltered_timeline') && Cb.phase5_skip_unfiltered_timeline;
+    if ~skip10
+        phase5_run_one_root(Cb);
+    end
     if isfield(Cb, 'phase5_run_forebrain_duplicate') && Cb.phase5_run_forebrain_duplicate
         if ~isfield(Cb, 'phase5_timeline_forebrain_root') || isempty(strtrim(char(string(Cb.phase5_timeline_forebrain_root))))
             return;
@@ -30,7 +42,7 @@ function trap_run_phase5_timeline_analysis(userC)
         Cf = Cb;
         Cf.phase5_timeline_root = Cb.phase5_timeline_forebrain_root;
         Cf.phase_AP_row_filter_fn = @trap_AP_filter_forebrain_exclude_fiber_wm;
-        fprintf('\n========== Step 10 (suite 2): forebrain gray matter (no BS/CB + fiber filter) ==========\n');
+        fprintf('\n========== Step 11: five-phase timeline (same outputs as Step 10; Step 9 forebrain filter) ==========\n');
         fprintf('Output: %s\n', Cf.phase5_timeline_root);
         phase5_run_one_root(Cf);
     end
@@ -95,8 +107,18 @@ function phase5_run_one_root(C)
         'Within-group mice are unpaired across phases unless manifest encodes pairing.\n' ...
         'Cross-group: ranksum per region within each phase (same as Step 6).\n' ...
         'Per-phase figures (volcano, tree, mice+SEM, directional top-N) mirror Step 6 layout.\n' ...
+        'cross_group_Active_vs_Passive/passive_active_density_ratio/: each phase (Baseline…Reinstatement) — top N lowest mean(Passive)/mean(Active) (extra CSV+barh only; trap_phase_AP_table means; tdTomato+ proxy).\n' ...
+        'cross_group_Active_vs_Passive/triple_scenario_shared_regions/: Scenario1 = During&Post&Withdrawal&Reinstatement all sig A>P; Scenario2 = During&Post&Reinstatement sig A>P and Withdrawal sig P>A (Wilcoxon + trap_phase_AP_pass).\n' ...
         'Heatmap 02_* is always row-wise z across phase columns (pattern shape), built from that scale''s phase means.\n'], ...
         strjoin(phases, ', '), bPh);
+    if isfield(C, 'phase_AP_row_filter_fn') && ~isempty(C.phase_AP_row_filter_fn)
+        readme = [readme sprintf([ ...
+            '\n\n--- Row filter active (Step 11 when root is phase5_timeline_forebrain_root) ---\n' ...
+            'phase_AP_row_filter_fn was applied after the Step 3 region mask.\n' ...
+            'Default Step 11 uses @trap_AP_filter_forebrain_exclude_fiber_wm — same exclusions as Step 9:\n' ...
+            '  atlas forebrain gate (trap_AP_atlas_keep_forebrain_step9) + fiber-tract subtree + name/acronym/ancestor heuristics.\n' ...
+            'Subfolder names, CSVs, and figure types are the same as an unfiltered Step 10 run; only the region count differs.\n'])];
+    end
     fid = fopen(fullfile(root, 'README_phase5_timeline.txt'), 'w');
     if fid > 0, fprintf(fid, '%s', readme); fclose(fid); end
 
@@ -265,6 +287,38 @@ function phase5_run_one_root(C)
             '%s: top %d by |A−P| (highlighted)', peakPhaseCross, min(nQ, height(TtopAP))), ...
             fullfile(cgf, sprintf('02_tree_top%d_peak_phase.png', nQ)), critStrP);
 
+        nRAT = 30;
+        if isfield(C, 'phase5_pa_ratio_topN')
+            nRAT = max(1, round(double(C.phase5_pa_ratio_topN)));
+        end
+        ratPhases = phases; % all five timeline phases unless trap_config.phase5_pa_ratio_phases overrides
+        if isfield(C, 'phase5_pa_ratio_phases') && ~isempty(C.phase5_pa_ratio_phases)
+            ratPhases = string(C.phase5_pa_ratio_phases(:)');
+        end
+        parDir = fullfile(cg, 'passive_active_density_ratio');
+        parTabDir = fullfile(parDir, 'tables');
+        parFigDir = fullfile(parDir, 'figures_described');
+        trap_ensure_dir(parTabDir);
+        trap_ensure_dir(parFigDir);
+        for irp = 1:numel(ratPhases)
+            phR = ratPhases(irp);
+            jm = find(strcmpi(string(phases), string(phR)), 1);
+            if isempty(jm)
+                continue;
+            end
+            TphR = Tcell{jm};
+            Trat = phase5_topn_lowest_passive_over_active_ratio(TphR, nRAT);
+            if height(Trat) < 1
+                continue;
+            end
+            slugR = matlab.lang.makeValidName(char(strrep(phR, ' ', '_')));
+            writetable(Trat, fullfile(parTabDir, sprintf('top%d_lowest_meanPassive_over_meanActive_%s.csv', nRAT, slugR)));
+            phase5_barh_pa_ratio(Trat, char(phR), useZ, ...
+                fullfile(parFigDir, sprintf('barh_top%d_lowest_P_over_A_%s.png', nRAT, slugR)), Cp);
+        end
+
+        phase5_triple_scenario_shared(cg, Tcell, phases, C, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP);
+
         fprintf('Phase-5 [%s] cross-group AP → %s\n', scaleDirs{iSc}, cg);
 
         %% Summary Q1–Q4 (per scale)
@@ -280,6 +334,8 @@ function phase5_run_one_root(C)
             fprintf(fidq, 'Q2: see within_*/tables/top*_regions_at_peak_phase_*.csv and figures 05–06.\n');
             fprintf(fidq, 'Q3 (cross-group peak phase): %s (see cross_group_.../tables/cross_group_which_phase_strongest_AP.csv)\n', peakPhaseCross);
             fprintf(fidq, 'Q4: see cross_group_.../tables/top*_between_group_at_peak_phase_*.csv and figures_described barh.\n');
+            fprintf(fidq, 'P/A mean-density ratio: cross_group_.../passive_active_density_ratio/ (each phase; lowest mean_P/mean_A; trap_config.phase5_pa_ratio_*).\n');
+            fprintf(fidq, 'Triple scenarios (During+Post+Withdrawal+Reinstatement shared): cross_group_.../triple_scenario_shared_regions/ (Scenario1 vs 2; README in each folder).\n');
             fclose(fidq);
         end
 
@@ -293,6 +349,114 @@ function phase5_run_one_root(C)
     trap_ensure_dir(figRoot);
     trap_write_folder_readme(figRoot, 'Phase-5 overview (see raw_cells_mm3/ and z_within_phase/)', readme);
     fprintf('Phase-5 timeline complete → %s\n', root);
+end
+
+function phase5_triple_scenario_shared(cg, Tcell, phases, C, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP)
+    phStr = string(phases);
+    jDur = find(strcmpi(phStr, "During"), 1);
+    jPost = find(strcmpi(phStr, "Post"), 1);
+    jWith = find(strcmpi(phStr, "Withdrawal"), 1);
+    jRein = find(strcmpi(phStr, "Reinstatement"), 1);
+    if isempty(jDur) || isempty(jPost) || isempty(jWith) || isempty(jRein)
+        warning('phase5:tripleScenario:phases', ...
+            'triple_scenario_shared_regions skipped: need During, Post, Withdrawal, Reinstatement in phase5_phases.');
+        return;
+    end
+    Tdur = Tcell{jDur};
+    Tpost = Tcell{jPost};
+    Tw = Tcell{jWith};
+    Trein = Tcell{jRein};
+    [sigDurA, ~] = phase5_masks_AP_PA(Tdur, C);
+    [sigPostA, ~] = phase5_masks_AP_PA(Tpost, C);
+    [sigWithA, sigWithP] = phase5_masks_AP_PA(Tw, C);
+    [sigReinA, ~] = phase5_masks_AP_PA(Trein, C);
+    ids1 = Tdur.id(sigDurA);
+    ids1 = intersect(ids1, Tpost.id(sigPostA));
+    ids1 = intersect(ids1, Tw.id(sigWithA));
+    ids1 = intersect(ids1, Trein.id(sigReinA));
+    ids2 = Tdur.id(sigDurA);
+    ids2 = intersect(ids2, Tpost.id(sigPostA));
+    ids2 = intersect(ids2, Tw.id(sigWithP));
+    ids2 = intersect(ids2, Trein.id(sigReinA));
+    base = fullfile(cg, 'triple_scenario_shared_regions');
+    trap_ensure_dir(base);
+    s1 = fullfile(base, 'Scenario1_DuringPost_AP__Withdrawal_AP__Reinstatement_AP');
+    s2 = fullfile(base, 'Scenario2_DuringPost_AP__Withdrawal_PA__Reinstatement_AP');
+    phase5_triple_scenario_one(s1, ids1, ...
+        ['Scenario 1: During sig A>P & Post sig A>P & Withdrawal sig A>P & Reinstatement (re-exposure) sig A>P. ' ...
+        'Intersection = regions satisfying all four (same criterion as Step 6–7 directional tests).'], ...
+        Tdur, Tpost, Tw, Trein, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP);
+    phase5_triple_scenario_one(s2, ids2, ...
+        ['Scenario 2: During sig A>P & Post sig A>P & Withdrawal sig P>A & Reinstatement sig A>P. ' ...
+        'Intersection = regions satisfying all four.'], ...
+        Tdur, Tpost, Tw, Trein, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP);
+    fprintf('Phase-5 triple scenarios → %s | Scenario1 n=%d | Scenario2 n=%d\n', base, numel(ids1), numel(ids2));
+end
+
+function [sigA, sigP] = phase5_masks_AP_PA(T, C)
+    pass = trap_phase_AP_pass(T, C);
+    md = T.mean_Active_minus_Passive;
+    sigA = pass & md > 0 & ~isnan(T.p_AP);
+    sigP = pass & md < 0 & ~isnan(T.p_AP);
+end
+
+function phase5_triple_scenario_one(outDir, ids, readmeBody, Tdur, Tpost, Tw, Trein, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP)
+    fd = fullfile(outDir, 'figures_described');
+    td = fullfile(outDir, 'tables');
+    trap_ensure_dir(fd);
+    trap_ensure_dir(td);
+    if isempty(ids)
+        Tids = table(double.empty(0, 1), 'VariableNames', {'id'});
+    else
+        Tids = table(ids(:), 'VariableNames', {'id'});
+    end
+    writetable(Tids, fullfile(td, 'shared_region_ids.csv'));
+    Tdet = phase5_triple_scenario_detail_table(ids, Tdur, Tpost, Tw, Trein);
+    if height(Tdet) >= 1
+        writetable(Tdet, fullfile(td, 'shared_regions_AP_stats_by_phase.csv'));
+    end
+    fid = fopen(fullfile(td, 'README_criteria.txt'), 'w');
+    if fid > 0
+        fprintf(fid, '%s\n\nWilcoxon rank-sum per region per phase; significance = trap_phase_AP_pass (same as Step 6).\n', readmeBody);
+        fclose(fid);
+    end
+    phList = ["During", "Post", "Withdrawal", "Reinstatement"];
+    Tlist = {Tdur, Tpost, Tw, Trein};
+    [~, ttl] = fileparts(outDir);
+    ttl = strrep(char(ttl), '_', ' ');
+    for ii = 1:4
+        slug = matlab.lang.makeValidName(char(strrep(phList(ii), ' ', '_')));
+        png = fullfile(fd, sprintf('%02d_mice_sem_%s.png', ii, slug));
+        if isempty(ids)
+            trap_export_placeholder_figure(png, char(phList(ii)), 'No shared regions (n=0).');
+        else
+            Tsub = trap_table_rows_for_ids(Tlist{ii}, ids);
+            trap_phase_plot_AP_bars_sem_mice(densWork, GroupDelivery, GroupPhase, phList(ii), Node, Tsub, ...
+                sprintf('%s | %s | n=%d', ttl, phList(ii), numel(ids)), png, critStrP, Cp);
+        end
+    end
+end
+
+function Tdet = phase5_triple_scenario_detail_table(ids, Tdur, Tpost, Tw, Trein)
+    if isempty(ids)
+        Tdet = table();
+        return;
+    end
+    idv = ids(:);
+    [~, ia] = ismember(idv, Tdur.id);
+    [~, ib] = ismember(idv, Tpost.id);
+    [~, ic] = ismember(idv, Tw.id);
+    [~, idd] = ismember(idv, Trein.id);
+    Tdet = table(idv, Tdur.region(ia), ...
+        Tdur.p_AP(ia), Tdur.q_AP(ia), Tdur.mean_Active_minus_Passive(ia), ...
+        Tpost.p_AP(ib), Tpost.q_AP(ib), Tpost.mean_Active_minus_Passive(ib), ...
+        Tw.p_AP(ic), Tw.q_AP(ic), Tw.mean_Active_minus_Passive(ic), ...
+        Trein.p_AP(idd), Trein.q_AP(idd), Trein.mean_Active_minus_Passive(idd), ...
+        'VariableNames', {'id', 'region', ...
+        'p_AP_During', 'q_AP_During', 'meanAct_minus_Pas_During', ...
+        'p_AP_Post', 'q_AP_Post', 'meanAct_minus_Pas_Post', ...
+        'p_AP_Withdrawal', 'q_AP_Withdrawal', 'meanAct_minus_Pas_Withdrawal', ...
+        'p_AP_Reinstatement', 'q_AP_Reinstatement', 'meanAct_minus_Pas_Reinstatement'});
 end
 
 function s = ternary_str(tf, a, b)
@@ -480,6 +644,53 @@ function phase5_barh_AP_effect(Ttop, titleStr, pngPath, useZ, critStrP)
     title({titleStr; ['Sorted by |effect|; ' critStrP]}, 'Interpreter', 'none', 'FontSize', 10);
     grid on;
     trap_export_figure(gcf, pngPath, 'Top regions by |mean_A − mean_P| at cross-group peak phase (p values in CSV).');
+    close(gcf);
+end
+
+function Tout = phase5_topn_lowest_passive_over_active_ratio(Tph, nTop)
+    mA = Tph.mean_Active;
+    mP = Tph.mean_Passive;
+    nAc = Tph.n_Active;
+    nPs = Tph.n_Passive;
+    nR = height(Tph);
+    ratio = nan(nR, 1);
+    for i = 1:nR
+        if nAc(i) >= 1 && nPs(i) >= 1 && isfinite(mA(i)) && mA(i) > 0 && isfinite(mP(i))
+            ratio(i) = mP(i) / mA(i);
+        end
+    end
+    ok = find(isfinite(ratio));
+    if isempty(ok)
+        Tout = table();
+        return;
+    end
+    [~, sidx] = sort(ratio(ok), 'ascend');
+    ord = ok(sidx);
+    nk = min(nTop, numel(ord));
+    ix = ord(1:nk);
+    Tout = table(Tph.id(ix), string(Tph.region(ix)), Tph.depth(ix), mA(ix), mP(ix), ratio(ix), nAc(ix), nPs(ix), ...
+        'VariableNames', {'id', 'region', 'depth', 'mean_Active', 'mean_Passive', 'ratio_Passive_over_Active', 'n_Active', 'n_Passive'});
+end
+
+function phase5_barh_pa_ratio(Trat, phStr, useZ, pngPath, Ccfg)
+    if height(Trat) < 1
+        return;
+    end
+    n = height(Trat);
+    r = Trat.ratio_Passive_over_Active;
+    figure('Color', 'w', 'Position', [100 80 820 max(420, min(1400, 24 * n))]);
+    barh(1:n, r, 0.85, 'FaceColor', [0.25 0.45 0.72], 'EdgeColor', [0.3 0.3 0.3], 'LineWidth', 0.3);
+    yLabs = trap_region_plot_tick_labels(double(Trat.id), Trat.region, Ccfg);
+    set(gca, 'YDir', 'reverse', 'YTick', 1:n, 'YTickLabel', yLabs, 'FontSize', 9);
+    ylim([0.5, n + 0.5]);
+    xlabel('mean(Passive) / mean(Active)  [group means; lower = more Active-dominant]', 'Interpreter', 'none');
+    if useZ
+        title({sprintf('%s: lowest %d regions by P/A mean ratio', phStr, n); '(within-phase z scale)'}, 'Interpreter', 'none', 'FontSize', 10);
+    else
+        title({sprintf('%s: lowest %d regions by P/A mean ratio', phStr, n); '(cells/mm³ — tdTomato+ proxy)'}, 'Interpreter', 'none', 'FontSize', 10);
+    end
+    grid on;
+    trap_export_figure(gcf, pngPath, 'Ratio = mean Passive / mean Active from trap_phase_AP_table; ≥1 mouse per arm.');
     close(gcf);
 end
 
