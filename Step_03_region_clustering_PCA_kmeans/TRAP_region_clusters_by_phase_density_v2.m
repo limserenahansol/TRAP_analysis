@@ -13,7 +13,7 @@ function TRAP_region_clusters_by_phase_density_v2()
 %           * Else (no depth-6 / non-layer depth-7 descendants) -> keep
 %             the depth-5 node itself
 %       - Depth-7 nodes whose name contains "layer" are ignored (not used)
-% 4) For each phase in trap_config.v2_clustering_phases (default: During, Post, Withdrawal, Reinstatement) separately:
+% 4) For each phase (trap_config.v2_clustering_phases, or auto = all phases in manifest) separately:
 %       - z-score across samples (region-wise)
 %       - k-means on regions (K=4)
 %       - UMAP (if available) or PCA embedding
@@ -54,6 +54,11 @@ fprintf("Output dir: %s\n", outDir);
 
 useAllCsv = isfield(C, 'v2_sample_source') && strcmpi(C.v2_sample_source, 'all_csv');
 if useAllCsv
+    if isfield(C, 'v2_clustering_phases') && ~isempty(C.v2_clustering_phases)
+        wmsg = ['v2_sample_source=all_csv cannot label During/Post/Baseline from filenames; ' ...
+            'those columns stay Unknown. Set v2_sample_source=''manifest'' to match TRAP_sample_manifest.csv.'];
+        warning('TRAP:v2:allCsvPhases', '%s', wmsg);
+    end
     if numel(paths) > 1
         warning(['v2_sample_source=all_csv uses only the first cohort CSV. ' ...
             'Use manifest to pool multiple cohorts.']);
@@ -213,24 +218,20 @@ NodeSel.parent_d4_acronym = parentD4;
 
 figDir = C.v2_figDir;
 if ~exist(figDir, 'dir'), mkdir(figDir); end
-if isfield(C, 'v2_clustering_phases') && ~isempty(C.v2_clustering_phases)
-    phReadme = strjoin(string(C.v2_clustering_phases), ', ');
-else
-    phReadme = 'During, Post, Withdrawal, Reinstatement';
+phasesToUse = trap_v2_resolve_clustering_phases(C, GroupPhase);
+phReadme = strjoin(phasesToUse, ', ');
+if isempty(phasesToUse)
+    warning('TRAP:v2:noPhases', 'No phases to cluster after resolving manifest — check TRAP_sample_manifest.csv phase column.');
 end
 trap_write_folder_readme(figDir, 'STEP 3 — Region clustering v2 (figures)', ...
     sprintf(['Each region = one brain area: %s. L/R hemispheres averaged per region (see trap_load_pooled_density_LR).\n' ...
-    'Phases plotted: %s (trap_config.v2_clustering_phases). Each phase analyzed separately. UMAP: install run_umap; else PCA.\n' ...
-    'If a phase has <2 samples it is skipped. Legacy all_csv only labels Withdrawal/Reinstatement from filenames — use manifest for During/Post.\n' ...
+    'Phases plotted: %s (trap_config.v2_clustering_phases empty = auto from manifest). Each phase analyzed separately. UMAP: install run_umap; else PCA.\n' ...
+    'If a phase has <2 samples it is skipped. v2_sample_source must be **manifest** for During/Post (all_csv only labels Withdrawal/Reinstatement).\n' ...
     'Tables (RepRegions CSV, .mat) are in: %s\n'], depthRuleLabel, phReadme, outDir));
 
-%% 4. Phase-wise region clustering and plots
-if isfield(C, 'v2_clustering_phases') && ~isempty(C.v2_clustering_phases)
-    phasesToUse = string(C.v2_clustering_phases(:))';
-else
-    phasesToUse = ["During", "Post", "Withdrawal", "Reinstatement"];
-end
+fprintf('Step 3 v2 clustering phases (%d): %s\n', numel(phasesToUse), phReadme);
 
+%% 4. Phase-wise region clustering and plots
 for ph = phasesToUse
     fprintf("\n--- Phase: %s ---\n", ph);
     idxPhase = (GroupPhase == ph);
@@ -439,12 +440,50 @@ if isfield(C, 'v2_sample_source')
     downData.v2_sample_source = C.v2_sample_source;
 end
 if isfield(C, 'v2_clustering_phases') && ~isempty(C.v2_clustering_phases)
-    downData.v2_clustering_phases = C.v2_clustering_phases;
+    downData.v2_clustering_phases_config = C.v2_clustering_phases;
 end
+downData.v2_clustering_phases_used = phasesToUse;
 
 save(fullfile(outDir, "TRAP_downstream_input.mat"), "-struct", "downData");
 fprintf("Saved downstream input: %s\n", fullfile(outDir,"TRAP_downstream_input.mat"));
 
+end
+
+%% =====================================================================
+function phasesOut = trap_v2_resolve_clustering_phases(C, GroupPhase)
+% Explicit trap_config.v2_clustering_phases, else all non-Exclude phases in manifest (order: phase5_phases).
+    if isfield(C, 'v2_clustering_phases') && ~isempty(C.v2_clustering_phases)
+        phasesOut = string(C.v2_clustering_phases(:))';
+        return;
+    end
+    u = unique(GroupPhase, 'stable');
+    keep = true(size(u));
+    for i = 1:numel(u)
+        if strlength(strtrim(u(i))) < 1 || u(i) == "Exclude" || u(i) == "Unknown"
+            keep(i) = false;
+        end
+    end
+    u = u(keep);
+    if isempty(u)
+        phasesOut = strings(1, 0);
+        return;
+    end
+    if isfield(C, 'phase5_phases') && ~isempty(C.phase5_phases)
+        ord = string(C.phase5_phases(:))';
+        phasesOut = strings(0, 1);
+        for k = 1:numel(ord)
+            if any(u == ord(k))
+                phasesOut = [phasesOut, ord(k)]; %#ok<AGROW>
+            end
+        end
+        for k = 1:numel(u)
+            if ~any(phasesOut == u(k))
+                phasesOut = [phasesOut, u(k)]; %#ok<AGROW>
+            end
+        end
+    else
+        phasesOut = sort(u);
+    end
 end
 
 %% =====================================================================

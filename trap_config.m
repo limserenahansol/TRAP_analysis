@@ -49,12 +49,11 @@ function C = trap_config()
     %   'hierarchy567'  — same as your original Downloads v2.m (depth 5/6/7 hierarchy)
     %   'depth56_fixed' — depth 6 + depth-5 without direct depth-6 child (coarser)
     C.v2_depth_rule = 'hierarchy567';
-    % v2 samples: 'manifest' = only manifest (matches Steps 6–9). 'all_csv' = extra CSV columns.
-    % For identical mice vs Step 6–9, use: v2_sample_source = 'manifest'
-    C.v2_sample_source = 'all_csv';
-    % Step 3 v2 figures (embedding, RAW rep regions, z-scored rep regions): which phases to run (each needs >=2 samples).
-    % Legacy all_csv uses trap_assign_groups_phase_legacy — only Withdrawal (7597*) and Reinstatement patterns; During/Post stay "Unknown" unless you extend that helper or use manifest.
-    C.v2_clustering_phases = ["During", "Post", "Withdrawal", "Reinstatement"];
+    % v2 samples: **manifest** = TRAP_sample_manifest.csv (During/Post/etc.; matches Steps 6–9).
+    % **all_csv** = first cohort file + legacy filename rules → **Withdrawal + Reinstatement only**.
+    C.v2_sample_source = 'manifest';
+    % Step 3 v2 phases: **[] = auto** — all phases present in manifest (order from phase5_phases). Or set explicit string array.
+    C.v2_clustering_phases = [];
 
     %% --- BRANCH / stats ---
     C.fdrMethod     = 'BH';    % 'BH' (Benjamini–Hochberg) or 'BY' (Benjamini–Yekutieli, conservative under dependence)
