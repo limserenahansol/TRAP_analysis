@@ -42,7 +42,7 @@ function trap_run_mouse_qc_density(userC)
 %     mouse_qc_outDir — override output root
 %     mouse_qc_depth_min, mouse_qc_depth_max — if both set, further restrict by Node.depth (after Step 3 mask if any)
 %     mouse_qc_run_kmeans — logical, default true
-%     mouse_qc_kmeans_ks — e.g. [2 3] (default)
+%     mouse_qc_kmeans_ks — e.g. [2 3 4] (default; k must be < n samples)
 %     mouse_qc_kmeans_pca_dims — 0 = no PCA; else cap PCs (default min(10, nSamples-1))
 %     mouse_qc_tsne_pca_dims — PCs fed to t-SNE (default min(30, nSamples-1)); ignored if no Stats TB
 %
@@ -230,7 +230,7 @@ function trap_run_mouse_qc_density(userC)
         end
         Dkm = densFb(dmKm, :);
         NodeKm = NodeFb(dmKm, :);
-        ks = [2, 3];
+        ks = [2, 3, 4];
         if isfield(C, 'mouse_qc_kmeans_ks') && ~isempty(C.mouse_qc_kmeans_ks)
             ks = unique(round(double(C.mouse_qc_kmeans_ks(:)')), 'stable');
         end

@@ -20,6 +20,7 @@ function C = trap_config()
     C.mouse_qc_use_all_csv_columns = true;  % false = QC uses only manifest samples (same as Step 1+ loader)
     % Exports often have count, density, volume, AVERAGE per mouse — Step 00 uses density columns only.
     C.mouse_qc_density_column_header_substring = 'density (cells/mm^3)';
+    C.mouse_qc_kmeans_ks = [2, 3, 4];
 
     C.outRoot       = fullfile(root, 'TRAP_OUTPUT');
     C.BRANCH_dir    = fullfile(C.outRoot, '01_BRANCH_tables_and_figures');
