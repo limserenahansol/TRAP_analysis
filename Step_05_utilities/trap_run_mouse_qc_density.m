@@ -520,6 +520,24 @@ function mouse_qc_kmeans_markers(Dreg, Node, depthMask, sampleNames, sampleDpLab
         Ta = table(sampleNames, midS, string(GroupDelivery), string(GroupPhase), string(sampleDpLabs), idx, ...
             'VariableNames', {'sample_column', 'mouse_id', 'delivery', 'phase', 'delivery_phase_label', 'cluster'});
         writetable(Ta, fullfile(tabDir, sprintf('kmeans_k%d_sample_assignments.csv', k)));
+        rosterPath = fullfile(tabDir, sprintf('kmeans_k%d_cluster_roster.txt', k));
+        fidR = fopen(rosterPath, 'w');
+        if fidR > 0
+            fprintf(fidR, 'K-means k=%d | %s\n', k, branchTag);
+            fprintf(fidR, 'One line per sample (same rows as kmeans_k%d_sample_assignments.csv).\n\n', k);
+            for cc = 1:k
+                jj = find(idx == cc);
+                fprintf(fidR, '--- cluster %d (n=%d) ---\n', cc, numel(jj));
+                for t = 1:numel(jj)
+                    jt = jj(t);
+                    fprintf(fidR, '  mouse_id=%s | sample_column=%s | delivery=%s | phase=%s | delivery_phase_label=%s\n', ...
+                        char(strtrim(midS(jt))), char(sampleNames(jt)), char(strtrim(string(GroupDelivery(jt)))), ...
+                        char(strtrim(string(GroupPhase(jt)))), char(string(sampleDpLabs{jt})));
+                end
+                fprintf(fidR, '\n');
+            end
+            fclose(fidR);
+        end
 
         if size(scoreTsne, 2) >= 2
             mouse_qc_dim2_scatter_clusters(scoreTsne(:, 1:2), idx, k, ...
@@ -562,7 +580,7 @@ function mouse_qc_kmeans_markers(Dreg, Node, depthMask, sampleNames, sampleDpLab
 
         if fidN > 0
             fprintf(fidN, '\n--- k=%d ---\n', k);
-            fprintf(fidN, 'assignments: kmeans_k%d_sample_assignments.csv\n', k);
+            fprintf(fidN, 'assignments: kmeans_k%d_sample_assignments.csv | kmeans_k%d_cluster_roster.txt\n', k, k);
         end
 
         for c = 1:k
