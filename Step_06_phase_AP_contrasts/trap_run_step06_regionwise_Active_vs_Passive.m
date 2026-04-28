@@ -40,6 +40,10 @@ function trap_run_step06_regionwise_Active_vs_Passive()
     end
 
     [densMean, Node, sampleNames, GroupDelivery, GroupPhase] = trap_load_pooled_density_LR(C);
+    [densMean, GroupDelivery, GroupPhase, sampleNames] = trap_AP_drop_exclude_samples( ...
+        densMean, GroupDelivery, GroupPhase, sampleNames, C);
+    [densMean, Node, maskMsg] = trap_AP_filter_to_step3_regions(densMean, Node, C);
+    fprintf('%s\n', maskMsg);
     fprintf('===== Step 6: regionwise Active vs Passive | %s =====\n', critStr);
     fprintf('%d regions, %d samples. Test=%s\n', size(densMean, 1), numel(sampleNames), C.phase_AP_test);
 
@@ -60,6 +64,8 @@ function trap_run_step06_regionwise_Active_vs_Passive()
         fullfile(fig, 'Reinstatement_01_atlas_tree_sig_regions.png'), critStr);
     trap_phase_volcano_AP(T_rein, passR, sprintf('Step6 Reinstatement | %s', critStr), ...
         fullfile(fig, 'Reinstatement_02_volcano.png'), critStr, C);
+    trap_AP_emit_ttest2_volcano_duplicate(C, C, T_rein, passR, sprintf('Step6 Reinstatement | %s', critStr), ...
+        fullfile(fig, 'Reinstatement_02_volcano.png'), critStr);
     if nnz(passR) > 0
         [~, ord] = sort(T_rein.p_AP(passR));
         ix = find(passR);
@@ -76,6 +82,8 @@ function trap_run_step06_regionwise_Active_vs_Passive()
         fullfile(fig, 'Withdrawal_01_atlas_tree_sig_regions.png'), critStr);
     trap_phase_volcano_AP(T_with, passW, sprintf('Step6 Withdrawal | %s', critStr), ...
         fullfile(fig, 'Withdrawal_02_volcano.png'), critStr, C);
+    trap_AP_emit_ttest2_volcano_duplicate(C, C, T_with, passW, sprintf('Step6 Withdrawal | %s', critStr), ...
+        fullfile(fig, 'Withdrawal_02_volcano.png'), critStr);
     if nnz(passW) > 0
         [~, ord] = sort(T_with.p_AP(passW));
         ix = find(passW);

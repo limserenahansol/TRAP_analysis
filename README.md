@@ -116,6 +116,19 @@ trap_run_phase5_timeline_analysis
 % trap_run_phase5_timeline_analysis(struct('phase_AP_row_filter_fn', @trap_AP_filter_forebrain_exclude_fiber_wm))
 ```
 
+### Steps 12–13 (per-group top-N, universal cluster maps)
+
+**Prerequisites:** run at least through **Step 3 v2** so `TRAP_downstream_input.mat` exists. For Step 13, Step 3 must use the **universal partition** (`C.v2_universal_partition = true` in `trap_config`).
+
+| Goal | MATLAB |
+|------|--------|
+| **Step 12 only** (top-N regions per group × phase) | `trap_run_step12_per_group_topN` — optional `struct('trap_output_density_variant','calculated_mm3')` or `'allen_mm3'`. |
+| **Step 13 only** (PCA, t-SNE, k-sanity, phase trajectories, top representative regions per cluster) | `trap_run_step13_universal_cluster_viz(struct('trap_output_density_variant','calculated_mm3'))` |
+| **Full pipeline (Steps 1–13)** for **one** density tree | `RUN_PIPELINE_ALL` or `RUN_PIPELINE_ALL(struct('trap_output_density_variant','calculated_mm3'))` |
+| **Both density variants** (separate `TRAP_OUTPUT_allen_mm3` and `TRAP_OUTPUT_calculated_mm3` trees) | `RUN_PIPELINE_ALL_dual_density` |
+
+Always run **`cd(...)`** to the folder that contains **`init_TRAP_pipeline.m`** (e.g. `TRAP_github_sync` or `TRAP_analysis_sync`), then **`init_TRAP_pipeline`** before any step.
+
 More detail: **[`WHEN_YOU_ADD_MICE_EN_KR.md`](WHEN_YOU_ADD_MICE_EN_KR.md)** (EN+KR), **[`DENSITY_CSV_SETUP.txt`](DENSITY_CSV_SETUP.txt)**.
 
 ---

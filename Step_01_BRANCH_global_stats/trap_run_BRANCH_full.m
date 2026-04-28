@@ -170,13 +170,27 @@ function trap_branch_pca_umap(densMean, Node, GroupA, GroupB, sampleNames, figDi
 end
 
 function trap_branch_dendrogram(densMean, Node, sampleNames, figDir, C)
-    depth = Node.depth;
-    maskDepth = depth >= C.pca_depth_min & depth <= C.pca_depth_max;
-    if ~any(maskDepth)
-        X = densMean';
+    dm = densMean;
+    nd = Node;
+    if isfield(C, 'phase_AP_region_mask_step3') && C.phase_AP_region_mask_step3
+        [dm, nd, ~] = trap_AP_filter_to_step3_regions(dm, nd, C);
+        maskDepth = true(height(nd), 1);
+        regionTxt = sprintf('Step 3 mask (%s), all retained regions', char(string(C.v2_depth_rule)));
     else
-        X = densMean(maskDepth, :)';
+        depth = nd.depth;
+        maskDepth = depth >= C.pca_depth_min & depth <= C.pca_depth_max;
+        regionTxt = sprintf('depth %d–%d', C.pca_depth_min, C.pca_depth_max);
     end
+    if ~any(maskDepth)
+        X = dm';
+    else
+        X = dm(maskDepth, :)';
+    end
+    finiteCols = all(isfinite(X), 1);
+    if nnz(finiteCols) < 2
+        error('trap_branch_dendrogram: fewer than 2 all-finite region columns (check atlas / cohort NaNs).');
+    end
+    X = X(:, finiteCols);
     D = pdist(X, 'euclidean');
     Z = linkage(D, 'average');
     figure('Color', 'w');
@@ -185,9 +199,10 @@ function trap_branch_dendrogram(densMean, Node, sampleNames, figDir, C)
     title('Sample dendrogram');
     trap_export_figure(gcf, fullfile(figDir, '04_dendrogram_samples_euclidean.png'), ...
         ['PLOT: Hierarchical clustering of SAMPLES.\n' ...
-        'DISTANCE: Euclidean between each sample''s vector of region densities (depth ' sprintf('%d–%d', C.pca_depth_min, C.pca_depth_max) ').\n' ...
+        'DISTANCE: Euclidean between each sample''s vector of region densities (' regionTxt '; columns with any NaN dropped).\n' ...
         'LINKAGE: average.\n' ...
-        'INTERPRETATION: Similar brains cluster together (pattern similarity across regions).\n']);
+        'INTERPRETATION: Similar brains cluster together (pattern similarity across regions).\n' ...
+        'When phase_AP_region_mask_step3 is true, matches Step 00 mouse QC Euclidean region set.\n']);
     close(gcf);
 end
 

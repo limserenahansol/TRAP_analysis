@@ -1,5 +1,6 @@
 function T = trap_phase_AP_table(densMean, GroupDelivery, GroupPhase, phaseName, Node, C)
-% Active vs Passive within one phase — **Wilcoxon rank-sum** on all **mouse** values (not on means).
+% Active vs Passive within one phase — **Wilcoxon rank-sum** (p_AP) and **Welch t-test** (p_AP_ttest2)
+% on all **mouse** values per region (not on group means).
 
     idxPh = GroupPhase == phaseName;
     if nnz(idxPh) < 2
@@ -11,6 +12,7 @@ function T = trap_phase_AP_table(densMean, GroupDelivery, GroupPhase, phaseName,
     mPas = dPh == "Passive";
     nR = size(densMean, 1);
     p = nan(nR, 1);
+    p_t = nan(nR, 1);
     md = nan(nR, 1);
     mA = nan(nR, 1);
     mP = nan(nR, 1);
@@ -28,9 +30,21 @@ function T = trap_phase_AP_table(densMean, GroupDelivery, GroupPhase, phaseName,
         mP(i) = mean(xp, 'omitnan');
         md(i) = mA(i) - mP(i);
         p(i) = ranksum(xa(:), xp(:));
+        if nAc(i) >= 2 && nPs(i) >= 2
+            try
+                [~, p_t(i)] = ttest2(xa(:), xp(:), 'Vartype', 'unequal');
+            catch
+                try
+                    [~, p_t(i)] = ttest2(xa(:), xp(:));
+                catch
+                    p_t(i) = nan;
+                end
+            end
+        end
     end
     q = trap_fdr(p, C.fdrMethod);
-    T = table(Node.id, string(Node.acronym), Node.depth, p, q, md, mA, mP, nAc, nPs, ...
-        'VariableNames', {'id', 'region', 'depth', 'p_AP', 'q_AP', 'mean_Active_minus_Passive', ...
-        'mean_Active', 'mean_Passive', 'n_Active', 'n_Passive'});
+    q_t = trap_fdr(p_t, C.fdrMethod);
+    T = table(Node.id, string(Node.acronym), Node.depth, p, q, p_t, q_t, md, mA, mP, nAc, nPs, ...
+        'VariableNames', {'id', 'region', 'depth', 'p_AP', 'q_AP', 'p_AP_ttest2', 'q_AP_ttest2', ...
+        'mean_Active_minus_Passive', 'mean_Active', 'mean_Passive', 'n_Active', 'n_Passive'});
 end

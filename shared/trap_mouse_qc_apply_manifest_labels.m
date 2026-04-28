@@ -23,6 +23,7 @@ function [GroupDelivery, GroupPhase, M] = trap_mouse_qc_apply_manifest_labels(C,
         Mman.cohort_id = ones(height(Mman), 1);
     end
 
+    relaxCohort = trap_mouse_qc_relax_manifest_cohort_id(cohortIds);
     for k = 1:nS
         ci = cohortIds(k);
         cn = char(strtrim(colNames{k}));
@@ -32,10 +33,13 @@ function [GroupDelivery, GroupPhase, M] = trap_mouse_qc_apply_manifest_labels(C,
             if isstring(mc) || ischar(mc)
                 mc = str2double(char(strtrim(mc)));
             end
-            if isnan(mc) || mc ~= ci
+            if isnan(mc)
                 continue;
             end
-            if ~strcmp(char(strtrim(string(Mman.column_name(r)))), cn)
+            if ~relaxCohort && mc ~= ci
+                continue;
+            end
+            if ~trap_density_manifest_column_matches(Mman.column_name(r), cn, C)
                 continue;
             end
             mask(r) = true;

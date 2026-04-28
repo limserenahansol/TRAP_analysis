@@ -1,0 +1,96 @@
+================================================================================
+TRAP analysis — Q&A for talks (regions, quantification, ranking, region counts)
+================================================================================
+
+Q1. To rank the different brain regions, please explain how brain regions are
+    anatomically defined, what parameter is quantified (fluorescence density or
+    cell number), and how the signal is quantified.
+
+A1. ANATOMICAL DEFINITION
+    Brain regions follow the Allen Mouse Brain Common Coordinate Framework (CCF).
+    In our cohort spreadsheet, each row is one Allen structure: structure ID, full
+    name, acronym, parent_structure_id, and depth in the atlas hierarchy. Very
+    shallow levels (e.g. depth ~1) separate only broad divisions (e.g. cerebrum
+    vs. major lobes). Very deep levels (e.g. depth 8–9) split cortex into many
+    fine laminar parcels (e.g. SSp-un2/3), which are often too small and variable
+    for robust population-level TRAP comparisons across mice. We therefore do
+    not analyze the full table at maximum resolution.
+
+    Our default analysis mask uses the Step 3 rule “hierarchy567” (see
+    trap_config: v2_depth_rule). In plain language, it keeps a curated set of
+    structures at atlas depths 5, 6, and 7, with logic to reduce double-counting
+    when both a parent region and a finer child region would otherwise represent
+    overlapping tissue. Depth-7 structures whose names indicate cortical “layers”
+    are handled separately from other depth-7 nodes. This matches the common
+    practice in mouse neuroanatomy papers of working at mid-to-high parcellation
+    resolution (roughly depths 5–7) rather than the finest laminar split.
+
+    For bilateral structures, the pipeline averages Left and Right into one
+    value per region pair (mean of Allen “-L” and “-R” rows), so each ranked
+    “region” is one bilateral anatomical unit unless the structure is unpaired.
+
+    WHAT IS QUANTIFIED
+    The readout is TRAP-positive cell density, not a separate raw fluorescence
+    intensity channel. Densities are computed from the same underlying
+    measurements: positive cell counts and tissue volume. We report density as
+    cells per mm³ of the measured sample tissue (and, where noted, the parallel
+    formulation using Allen reference volume per structure in cells/mm³).
+
+    HOW REGIONS ARE RANKED (figures shared with PI)
+    For the per-group, per-phase “top 25” style plots we discussed, ranking is by
+    mean density within that group and phase after within-phase z-scoring: for
+    each region, values are z-scored across all mice in that phase (so each
+    region has mean 0 and unit spread within that phase), then we take the mean
+    across Active-only or Passive-only mice and rank regions by that mean. This
+    highlights which regions are relatively high or low within the cohort at each
+    phase, in comparable units. Raw-density rankings (cells/mm³) are available in
+    parallel output folders when the same analysis is run on the non–z-scored
+    scale.
+
+--------------------------------------------------------------------------------
+
+Q2. How many brain regions are there in total, with or without the brainstem?
+
+A2. Exact numbers depend on the export (same cohort file row count) and on which
+    mask you apply. Run this once per density output tree to generate shareable
+    counts (writes a .txt and .csv next to your TRAP_OUTPUT_* folder):
+
+        cd('.../TRAP_analysis_sync');
+        init_TRAP_pipeline;
+        trap_report_region_mask_counts(struct('trap_output_density_variant','allen_mm3'));
+        trap_report_region_mask_counts(struct('trap_output_density_variant','calculated_mm3'));
+
+    Open:
+        TRAP_OUTPUT_allen_mm3/TRAP_region_counts_by_mask.txt
+        TRAP_OUTPUT_calculated_mm3/TRAP_region_counts_by_mask.txt
+
+    The table reports:
+        • after_bilateral_pool
+            — all bilateral-pooled regions in the spreadsheet (baseline count).
+        • step3_mask_hierarchy567
+            — default statistical mask (depth 5–7 hierarchy567 rule); smaller N.
+        • whole_brain_no_fiber_wm
+            — PARALLEL to Step 3: starts from the FULL baseline N, drops only
+              fiber / WM / ventricular CSF. N is usually MUCH LARGER than Step 3
+              because Step 3 is a resolution rule, not “full atlas minus fiber”.
+        • forebrain_no_brainstem_cerebellum_fiber
+            — PARALLEL to Step 3: full atlas then forebrain + fiber exclusions.
+        • step3_then_no_fiber_wm
+            — SEQUENTIAL: Step 3 list first, then fiber/ventricle drop (N ≤ Step 3).
+
+    IMPORTANT: It is normal that whole_brain_no_fiber (e.g. ~700) > step3 (~280).
+    Those rows are not cumulative steps; compare step3_then_no_fiber to see
+    fiber removal applied after Step 3.
+
+    “With brainstem” vs “without” for reporting:
+        • Use step3_mask_hierarchy567 for the main paper-style region count
+          (includes brainstem structures that pass the Step 3 rule).
+        • Use forebrain_no_brainstem_cerebellum_fiber for the count that excludes
+          brainstem, cerebellum, midbrain, etc. (see filter note in the report).
+
+    Always cite the numbers printed in TRAP_region_counts_by_mask.txt for the
+    talk—those are the exact integers for your current data and config.
+
+================================================================================
+End of document
+================================================================================

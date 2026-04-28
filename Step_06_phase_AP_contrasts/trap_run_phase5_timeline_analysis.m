@@ -108,7 +108,8 @@ function phase5_run_one_root(C)
         'Cross-group: ranksum per region within each phase (same as Step 6).\n' ...
         'Per-phase figures (volcano, tree, mice+SEM, directional top-N) mirror Step 6 layout.\n' ...
         'cross_group_Active_vs_Passive/passive_active_density_ratio/: each phase (Baseline…Reinstatement) — top N lowest mean(Passive)/mean(Active) (extra CSV+barh only; trap_phase_AP_table means; tdTomato+ proxy).\n' ...
-        'cross_group_Active_vs_Passive/triple_scenario_shared_regions/: Scenario1/2 = direction-only mean(A)>mean(P) or P>A per phase, intersect IDs, then top N by |Reinstatement Δ| (no p-value filter; trap_config.phase5_triple_scenario_topN).\n' ...
+        'cross_group_Active_vs_Passive/triple_scenario_shared_regions/: Scenario1/2 = direction-only mean(A)>mean(P) or P>A per phase, intersect IDs, then top N by |Reinstatement Δ| (no p-value filter; trap_config.phase5_triple_scenario_topN). ' ...
+        'Also 05_mice_sem_crossphase_meanAP_order.png: one A vs P bar pair per region, x-order by mean(Δ) across phases (not p-rank within phase).\n' ...
         'Heatmap 02_* is always row-wise z across phase columns (pattern shape), built from that scale''s phase means.\n'], ...
         strjoin(phases, ', '), bPh);
     if isfield(C, 'phase_AP_row_filter_fn') && ~isempty(C.phase_AP_row_filter_fn)
@@ -140,6 +141,16 @@ function phase5_run_one_root(C)
             Cp.phase_AP_plot_scale_label = 'raw cells/mm³';
         end
         critStrP = [critStr trap_AP_plot_scale_suffix(Cp)];
+
+        % Step 11 forebrain output only: MIC-style bars (regions on Y, values on X) + larger region labels
+        if phase5_is_forebrain_root(C, root)
+            Cp.phase_AP_bars_region_axis = 'y';
+            fsMic = 12;
+            if isfield(C, 'phase5_forebrain_timeline_region_fontsize') && ~isempty(C.phase5_forebrain_timeline_region_fontsize)
+                fsMic = double(C.phase5_forebrain_timeline_region_fontsize);
+            end
+            Cp.phase_AP_bars_region_fontsize = fsMic;
+        end
 
         readmeSc = sprintf('SCALE FOLDER: %s\n\n%s', scaleDirs{iSc}, readme);
         fidr = fopen(fullfile(subRoot, 'README_this_scale.txt'), 'w');
@@ -176,7 +187,7 @@ function phase5_run_one_root(C)
             phase5_plot_heatmap_rowz(Tfl, meanMat, phases, Node, nTopH, dName, useZ, fdir);
             phase5_plot_lines_topn(Tfl, meanMat, phases, Node, nTopL, dName, useZ, fdir);
 
-            [Tpr, peakJ, peakPh] = phase5_within_phase_ranking_table(deltaMat, phases, ib, refMode);
+            [Tpr, peakJ, peakPh] = phase5_within_phase_ranking_table(deltaMat, phases, ib, refMode, meanMat);
             writetable(Tpr, fullfile(tdir, 'within_group_phase_ranking_vs_baseline.csv'));
             peakPhaseWithin(iD) = peakPh;
             fidp = fopen(fullfile(tdir, sprintf('peak_phase_most_changed_vs_baseline_%s.txt', dName)), 'w');
@@ -240,6 +251,8 @@ function phase5_run_one_root(C)
 
             trap_phase_volcano_AP(Tph, pass, sprintf('%s: Active vs Passive | %s', ph, critStrP), ...
                 fullfile(pfig, '00_volcano.png'), critStrP, Cp);
+            trap_AP_emit_ttest2_volcano_duplicate(C, Cp, Tph, pass, sprintf('%s: Active vs Passive | %s', ph, critStrP), ...
+                fullfile(pfig, '00_volcano.png'), critStrP);
             trap_phase_tree_plot(Node, Tph, pass, sprintf('%s: sig regions (tree) | %s', ph, critStrP), ...
                 fullfile(pfig, '01_tree_sig_regions.png'), critStrP);
             if nnz(pass) > 0
@@ -345,7 +358,7 @@ function phase5_run_one_root(C)
             fprintf(fidq, 'Q3 (cross-group peak phase): %s (see cross_group_.../tables/cross_group_which_phase_strongest_AP.csv)\n', peakPhaseCross);
             fprintf(fidq, 'Q4: see cross_group_.../tables/top*_between_group_at_peak_phase_*.csv and figures_described barh.\n');
             fprintf(fidq, 'P/A mean-density ratio: cross_group_.../passive_active_density_ratio/ (each phase; lowest mean_P/mean_A; trap_config.phase5_pa_ratio_*).\n');
-            fprintf(fidq, 'Triple scenarios: cross_group_.../triple_scenario_shared_regions/ — direction-only intersection, top N by |Reinstatement mean(A−P)| (see README in each folder).\n');
+            fprintf(fidq, 'Triple scenarios: cross_group_.../triple_scenario_shared_regions/ — direction-only intersection, top N by |Reinstatement mean(A−P)|; 05_* = cross-phase mean order (see README in each folder).\n');
             fclose(fidq);
         end
 
@@ -394,8 +407,8 @@ function phase5_triple_scenario_shared(cg, Tcell, phases, C, Cp, densWork, Group
         '(among %d regions in the full intersection).'], ntop, nFull1);
     hdr2 = sprintf(['Scenario 2 (direction only): During A>P, Post A>P, Withdrawal P>A (mean(P)>mean(A)), ' ...
         'Reinstatement A>P. Intersect, then top %d by |Reinstatement Δ| (full intersection count = %d).'], ntop, nFull2);
-    phase5_triple_scenario_one(s1, ids1, hdr1, Tdur, Tpost, Tw, Trein, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP, ntop, nFull1);
-    phase5_triple_scenario_one(s2, ids2, hdr2, Tdur, Tpost, Tw, Trein, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP, ntop, nFull2);
+    phase5_triple_scenario_one(s1, ids1, hdr1, Tdur, Tpost, Tw, Trein, C, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP, ntop, nFull1);
+    phase5_triple_scenario_one(s2, ids2, hdr2, Tdur, Tpost, Tw, Trein, C, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP, ntop, nFull2);
     fprintf('Phase-5 triple scenarios → %s | S1 top%d (full∩=%d) | S2 top%d (full∩=%d)\n', ...
         base, numel(ids1), nFull1, numel(ids2), nFull2);
 end
@@ -429,11 +442,23 @@ function [idsTop, nFull] = phase5_triple_dir_intersect_topn(Tdur, Tpost, Tw, Tre
     idsTop = ids(o(1:nk));
 end
 
-function phase5_triple_scenario_one(outDir, ids, readmeBody, Tdur, Tpost, Tw, Trein, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP, ntopReport, nFullIntersect)
+function phase5_triple_scenario_one(outDir, ids, readmeBody, Tdur, Tpost, Tw, Trein, C, Cp, densWork, GroupDelivery, GroupPhase, Node, critStrP, ntopReport, nFullIntersect)
     fd = fullfile(outDir, 'figures_described');
     td = fullfile(outDir, 'tables');
     trap_ensure_dir(fd);
     trap_ensure_dir(td);
+    CpPlot = Cp;
+    if isfield(C, 'phase5_triple_bars_region_axis') && strlength(strtrim(char(string(C.phase5_triple_bars_region_axis)))) > 0
+        CpPlot.phase_AP_bars_region_axis = char(strtrim(string(C.phase5_triple_bars_region_axis)));
+    end
+    if isfield(C, 'phase5_triple_bars_region_fontsize') && ~isempty(C.phase5_triple_bars_region_fontsize)
+        tf = double(C.phase5_triple_bars_region_fontsize);
+        if isfield(CpPlot, 'phase_AP_bars_region_fontsize') && ~isempty(CpPlot.phase_AP_bars_region_fontsize)
+            CpPlot.phase_AP_bars_region_fontsize = max(double(CpPlot.phase_AP_bars_region_fontsize), tf);
+        else
+            CpPlot.phase_AP_bars_region_fontsize = tf;
+        end
+    end
     if isempty(ids)
         Tids = table(double.empty(0, 1), 'VariableNames', {'id'});
     else
@@ -454,7 +479,9 @@ function phase5_triple_scenario_one(outDir, ids, readmeBody, Tdur, Tpost, Tw, Tr
         fprintf(fid, '%s\n\n', readmeBody);
         fprintf(fid, ['Direction = mean(Active)−mean(Passive) per region (no p-value requirement). ' ...
             'Rank by |Reinstatement Δ|; output lists top %d IDs (full intersection before cap: %d regions).\n' ...
-            'p/q columns in CSV are descriptive Wilcoxon stats (same as Step 6 tables).\n'], ...
+            'p/q columns in CSV are descriptive Wilcoxon stats (same as Step 6 tables).\n' ...
+            'Figure 05_mice_sem_crossphase_meanAP_order.png: same IDs, x-order by mean(Δ) across During+Post+Withdrawal+Reinstatement; ' ...
+            'bars = mean of phase-specific group means; SEM across phases; dots = mouse values pooled across phases.\n'], ...
             ntopReport, nFullIntersect);
         fclose(fid);
     end
@@ -475,8 +502,54 @@ function phase5_triple_scenario_one(outDir, ids, readmeBody, Tdur, Tpost, Tw, Tr
         else
             Tsub = trap_table_rows_for_ids(Tlist{ii}, ids);
             trap_phase_plot_AP_bars_sem_mice(densWork, GroupDelivery, GroupPhase, phList(ii), Node, Tsub, ...
-                sprintf('%s | %s | n=%d', ttl, phList(ii), numel(ids)), png, critStrP, Cp);
+                sprintf('%s | %s | n=%d', ttl, phList(ii), numel(ids)), png, critStrP, CpPlot);
         end
+    end
+
+    idsX = phase5_triple_reorder_ids_crossphase_mean(ids, Tdur, Tpost, Tw, Trein, Cp);
+    png5 = fullfile(fd, '05_mice_sem_crossphase_meanAP_order.png');
+    if isempty(idsX)
+        if nFullIntersect < 1
+            msg5 = 'No regions (n=0): no aggregate cross-phase plot.';
+        else
+            msg5 = 'No IDs in output list (check top-N cap).';
+        end
+        trap_export_placeholder_figure(png5, [ttl ' | cross-phase mean order'], msg5);
+    else
+        trap_phase_plot_AP_bars_crossphase_aggregate(densWork, GroupDelivery, GroupPhase, phList, Node, idsX, ...
+            sprintf('%s | cross-phase mean Δ order | n=%d', ttl, numel(idsX)), png5, critStrP, CpPlot);
+    end
+end
+
+function idsOrd = phase5_triple_reorder_ids_crossphase_mean(ids, Tdur, Tpost, Tw, Trein, Cp)
+% Sort region IDs by descending mean or sum of mean_Active_minus_Passive across the four phase tables.
+    if isempty(ids)
+        idsOrd = ids;
+        return;
+    end
+    useSum = nargin >= 6 && ~isempty(Cp) && isfield(Cp, 'phase5_triple_crossphase_score') ...
+        && strcmpi(strtrim(char(string(Cp.phase5_triple_crossphase_score))), 'sum');
+    sc = nan(numel(ids), 1);
+    for i = 1:numel(ids)
+        id = ids(i);
+        v = [phase5_triple_row_mean_ap(Tdur, id), phase5_triple_row_mean_ap(Tpost, id), ...
+            phase5_triple_row_mean_ap(Tw, id), phase5_triple_row_mean_ap(Trein, id)];
+        if useSum
+            sc(i) = sum(v, 'omitnan');
+        else
+            sc(i) = mean(v, 'omitnan');
+        end
+    end
+    [~, o] = sort(sc, 'descend');
+    idsOrd = ids(o);
+end
+
+function m = phase5_triple_row_mean_ap(T, id)
+    r = T(T.id == id, :);
+    if isempty(r)
+        m = nan;
+    else
+        m = r.mean_Active_minus_Passive(1);
     end
 end
 
@@ -537,25 +610,53 @@ function refMode = phase5_resolve_within_ref(C, pha, meanMat, phases, ib)
     end
 end
 
-function [Tpr, peakJ, peakPh] = phase5_within_phase_ranking_table(deltaMat, phases, ib, refMode)
+function [Tpr, peakJ, peakPh] = phase5_within_phase_ranking_table(deltaMat, phases, ib, refMode, meanMat)
+% Baseline mode: median |Δ vs baseline| per phase. Leave-one-out / no baseline: **pairwise**
+% outlier score per phase j = median_i ( mean_{k~=j} |M_ij - M_ik| ) (no baseline column required).
+    if nargin < 5 || isempty(meanMat)
+        meanMat = [];
+    end
     nP = numel(phases);
     medAbs = nan(nP, 1);
     nRegFinite = zeros(nP, 1);
-    for j = 1:nP
-        if strcmp(refMode, 'baseline') && j == ib
-            continue;
+    if strcmp(refMode, 'leave_one_out') && ~isempty(meanMat) && size(meanMat, 2) == nP
+        nR = size(meanMat, 1);
+        for j = 1:nP
+            acc = nan(nR, 1);
+            othIdx = setdiff(1:nP, j);
+            if isempty(othIdx), continue; end
+            for i = 1:nR
+                mj = meanMat(i, j);
+                if ~isfinite(mj), continue; end
+                rowO = meanMat(i, othIdx);
+                rowO = rowO(isfinite(rowO));
+                if isempty(rowO), continue; end
+                acc(i) = mean(abs(mj - rowO), 'omitnan');
+            end
+            fin = isfinite(acc);
+            medAbs(j) = median(acc(fin), 'omitnan');
+            nRegFinite(j) = nnz(fin);
         end
-        v = abs(deltaMat(:, j));
-        fin = isfinite(v);
-        medAbs(j) = median(v(fin), 'omitnan');
-        nRegFinite(j) = nnz(fin);
-    end
-    if strcmp(refMode, 'baseline')
-        rows = find((1:nP)' ~= ib);
-    else
         rows = (1:nP)';
+    else
+        for j = 1:nP
+            if strcmp(refMode, 'baseline') && j == ib
+                continue;
+            end
+            v = abs(deltaMat(:, j));
+            fin = isfinite(v);
+            medAbs(j) = median(v(fin), 'omitnan');
+            nRegFinite(j) = nnz(fin);
+        end
+        if strcmp(refMode, 'baseline')
+            rows = find((1:nP)' ~= ib);
+        else
+            rows = (1:nP)';
+        end
     end
-    Tpr = table(phases(rows), medAbs(rows), nRegFinite(rows), ...
+    phFull = phases(:);
+    rowIdx = rows(:);
+    Tpr = table(phFull(rowIdx), medAbs(rowIdx), nRegFinite(rowIdx), ...
         'VariableNames', {'phase', 'median_abs_delta_vs_baseline', 'n_regions_with_finite_delta'});
     sc = medAbs;
     if strcmp(refMode, 'baseline')
@@ -964,4 +1065,13 @@ function cmap = phase5_redblue_cmap
     g = [linspace(0, 1, 128), linspace(1, 0, 128)];
     b = [ones(1, 128), linspace(1, 0, 128)];
     cmap = [r(:), g(:), b(:)];
+end
+
+function tf = phase5_is_forebrain_root(C, root)
+    tf = false;
+    if ~isfield(C, 'phase5_timeline_forebrain_root'), return; end
+    a = char(strtrim(string(root)));
+    b = char(strtrim(string(C.phase5_timeline_forebrain_root)));
+    if isempty(b), return; end
+    tf = strcmpi(strrep(a, '\', '/'), strrep(b, '\', '/'));
 end

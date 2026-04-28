@@ -122,7 +122,8 @@ function trap_phase_plot_Rein_vs_With_mice_sem(densMean, GroupDelivery, GroupPha
         delStr, nSamR, nSamW); 'Bars=mean; SEM; (L+R)/2 | Δ=mean_Rein−mean_With'}, 'Interpreter', 'none', 'FontSize', 9);
     h1 = patch(NaN, NaN, cr);
     h2 = patch(NaN, NaN, cw);
-    legend([h1, h2], {'Reinstatement', 'Withdrawal'}, 'Location', 'northeast');
+    legend([h1, h2], {'Reinstatement', 'Withdrawal'}, 'Location', 'southoutside', ...
+        'Orientation', 'horizontal', 'Interpreter', 'none', 'Box', 'on');
 
     foot = [readmeTxt newline 'Same rules as Step 6: all mice in ranksum; L+R bilateral mean per mouse.'];
     trap_export_figure(gcf, pngPath, foot);

@@ -24,12 +24,15 @@ function TRAP_region_clusters_by_phase_density_v2()
 %           (c) z-scored density Active vs Passive
 %       - Export representative region list (acronym + fullname) per cluster
 %
+% 4b) Universal partition: one k-means on all samples pooled across v2 phases (same K).
+%       One region→cluster label for cross-phase reporting (separate from per-phase cluster IDs).
+%
 % Additionally:
 %   - For each selected region we also store depth-4 parent acronym
 %     (e.g. SNr -> parent MBmot), and x-axis labels use
 %     "Acronym (ParentD4)".
 %
-% Exports TRAP_downstream_input.mat for downstream analysis.
+% Exports TRAP_downstream_input.mat for downstream analysis (includes universal pooled partition fields when run).
 %
 % HS custom (depth 5/6/7 hierarchy + depth-4 label)
 
@@ -226,6 +229,7 @@ end
 trap_write_folder_readme(figDir, 'STEP 3 — Region clustering v2 (figures)', ...
     sprintf(['Each region = one brain area: %s. L/R hemispheres averaged per region (see trap_load_pooled_density_LR).\n' ...
     'Phases plotted: %s (trap_config.v2_clustering_phases empty = auto from manifest). Each phase analyzed separately. UMAP: install run_umap; else PCA.\n' ...
+    'Universal partition: pooled k-means (RegionCluster_universal_*; *_universal_pooled; per-phase *_universal_layout_<Phase>).\n' ...
     'If a phase has <2 samples it is skipped. v2_sample_source must be **manifest** for During/Post (all_csv only labels Withdrawal/Reinstatement).\n' ...
     'Tables (RepRegions CSV, .mat) are in: %s\n'], depthRuleLabel, phReadme, outDir));
 
@@ -425,6 +429,191 @@ for ph = phasesToUse
         'Same layout as 02 — compares Active vs Passive after removing phase-wide level shifts.\n'], ph));
 end
 
+%% 4b. Universal partition — one k-means on all samples in phasesToUse (pooled z-score per region)
+universal_cluster_id = nan(nRegionsSel, 1);
+universal_partition_applied = false;
+universal_n_samples_pooled = 0;
+if isfield(C, 'v2_universal_partition') && ~C.v2_universal_partition
+    fprintf('Universal partition skipped (trap_config.v2_universal_partition = false).\n');
+elseif isempty(phasesToUse)
+    warning('TRAP:v2:noUniversal', 'Universal partition skipped: no phases in phasesToUse.');
+else
+    idxPool = ismember(GroupPhase, phasesToUse(:));
+    universal_n_samples_pooled = nnz(idxPool);
+    phPoolLabel = strjoin(phasesToUse, ', ');
+    fprintf("\n--- Universal partition (pooled samples; phases: %s) ---\n", phPoolLabel);
+    if universal_n_samples_pooled < 2
+        warning('TRAP:v2:universalFewSamples', ...
+            'Universal partition skipped: fewer than 2 samples in pooled phases.');
+    else
+        Xu  = densLRSel(:, idxPool);
+        Xzu = zscore(Xu, 0, 2);
+        regVarU  = std(Xzu, 0, 2, 'omitnan');
+        regMaskU = regVarU > 0 & all(~isnan(Xzu), 2);
+        if nnz(regMaskU) < K
+            warning('TRAP:v2:universalFewRegions', ...
+                'Universal partition skipped: too few valid regions after filtering (need >= K=%d).', K);
+        else
+            Xz_valid_u = Xzu(regMaskU, :);
+            useUMAPu = exist('run_umap', 'file') == 2;
+            if useUMAPu
+                fprintf('Running UMAP for universal pooled partition...\n');
+                Yembed_u = run_umap(Xz_valid_u);
+                PC1u = Yembed_u(:, 1);
+                PC2u = Yembed_u(:, 2);
+                xLabelStr_u = 'UMAP1';
+                yLabelStr_u = 'UMAP2';
+            else
+                fprintf('UMAP not found — using PCA for universal pooled partition.\n');
+                warnPCA = warning('off', 'all');
+                [~, score_u, ~, ~, expl_u] = pca(Xz_valid_u); %#ok<ASGLU>
+                warning(warnPCA);
+                PC1u = score_u(:, 1);
+                if size(score_u, 2) >= 2
+                    PC2u = score_u(:, 2);
+                    xLabelStr_u = sprintf('PC1 (%.1f%% var)', expl_u(1));
+                    yLabelStr_u = sprintf('PC2 (%.1f%% var)', expl_u(2));
+                else
+                    PC2u = zeros(size(PC1u));
+                    xLabelStr_u = sprintf('PC1 (%.1f%% var)', expl_u(1));
+                    yLabelStr_u = 'PC2 (n/a — very few samples, rank-deficient)';
+                end
+            end
+            rng(42); % distinct seed from per-phase rng(0); reproducible universal labels
+            clusterIdx_u = kmeans(Xz_valid_u, K, ...
+                'Replicates', kmRep, 'Distance', 'sqeuclidean');
+            s_u = silhouette(Xz_valid_u, clusterIdx_u);
+            validIdxU = find(regMaskU);
+            repGlobalIdx_u   = [];
+            repClusterID_u   = [];
+            for k = 1:K
+                idxC = find(clusterIdx_u == k);
+                if isempty(idxC), continue; end
+                [~, ordS] = sort(s_u(idxC), 'descend');
+                nPick = min(N_per_cluster, numel(idxC));
+                pickLocal  = idxC(ordS(1:nPick));
+                pickGlobal = validIdxU(pickLocal);
+                repGlobalIdx_u = [repGlobalIdx_u; pickGlobal(:)]; %#ok<AGROW>
+                repClusterID_u = [repClusterID_u; repmat(k, nPick, 1)];
+            end
+            [repGlobalIdx_u, iaU] = unique(repGlobalIdx_u, 'stable');
+            repClusterID_u = repClusterID_u(iaU);
+            universal_cluster_id(validIdxU) = clusterIdx_u;
+            universal_partition_applied = true;
+            fprintf('Universal: assigned %d regions to K=%d clusters; %d representative regions.\n', ...
+                numel(clusterIdx_u), K, numel(repGlobalIdx_u));
+
+            acr_u    = NodeSel.acronym(validIdxU);
+            full_u   = NodeSel.name(validIdxU);
+            par_u    = NodeSel.parent_d4_acronym(validIdxU);
+            depth_u  = NodeSel.depth(validIdxU);
+            id_u     = NodeSel.id(validIdxU);
+            Tall_u = table(acr_u, full_u, par_u, clusterIdx_u, depth_u, id_u, ...
+                'VariableNames', {'Acronym','FullName','ParentDepth4','Cluster','Depth','ID'});
+            csvAll = fullfile(outDir, 'RegionCluster_universal_all_regions.csv');
+            writetable(Tall_u, csvAll);
+            fprintf('Saved universal region→cluster table: %s\n', csvAll);
+
+            repAcr_u  = NodeSel.acronym(repGlobalIdx_u);
+            repFull_u = NodeSel.name(repGlobalIdx_u);
+            repDep_u  = NodeSel.depth(repGlobalIdx_u);
+            repID_u   = NodeSel.id(repGlobalIdx_u);
+            repPar_u  = NodeSel.parent_d4_acronym(repGlobalIdx_u);
+            Trep_u = table(repAcr_u, repFull_u, repPar_u, repClusterID_u, repDep_u, repID_u, ...
+                'VariableNames', {'Acronym','FullName','ParentDepth4','Cluster','Depth','ID'});
+            for k = 1:K
+                maskK = (repClusterID_u == k);
+                if ~any(maskK), continue; end
+                writetable(Trep_u(maskK, :), fullfile(outDir, ...
+                    sprintf('RepRegions_universal_Cluster%d_fullnames.csv', k)));
+            end
+
+            colors_u = lines(K);
+            figure('Color', 'w', 'Position', [200 200 900 800]); hold on;
+            for k = 1:K
+                idxC = (clusterIdx_u == k);
+                scatter(PC1u(idxC), PC2u(idxC), 20, colors_u(k, :), 'filled');
+            end
+            repEmb_u = trap_region_plot_tick_labels( ...
+                double(NodeSel.id(repGlobalIdx_u)), NodeSel.acronym(repGlobalIdx_u), C);
+            for ii = 1:numel(repGlobalIdx_u)
+                gIdx = repGlobalIdx_u(ii);
+                localIdx = find(validIdxU == gIdx);
+                if isempty(localIdx), continue; end
+                text(PC1u(localIdx), PC2u(localIdx), [' ' repEmb_u{ii}], ...
+                    'FontSize', 7, 'Color', 'k');
+            end
+            xlabel(xLabelStr_u);
+            ylabel(yLabelStr_u);
+            if useUMAPu
+                title(sprintf('Region embedding (universal pooled; UMAP; phases: %s)', phPoolLabel), 'FontWeight', 'bold');
+            else
+                title(sprintf('Region embedding (universal pooled; PCA; phases: %s)', phPoolLabel), 'FontWeight', 'bold');
+            end
+            grid on;
+            legStr_u = cell(K, 1);
+            for k = 1:K
+                legStr_u{k} = sprintf('Cluster %d (n=%d)', k, sum(clusterIdx_u == k));
+            end
+            legend(legStr_u, 'Location', 'bestoutside');
+            if useUMAPu, embName_u = 'UMAP'; else, embName_u = 'PCA'; end
+            outPNG_u = fullfile(figDir, sprintf('01_region_embedding_%s_universal_pooled.png', embName_u));
+            trap_export_figure(gcf, outPNG_u, sprintf([ ...
+                'UNIVERSAL POOL: all samples with Phase in {%s}. POINTS = regions. One k-means (K=%d); z-score across pooled samples per region.\n' ...
+                'Use this partition for a single region→cluster label across phases; phase-specific figures use separate k-means per phase.\n'], ...
+                phPoolLabel, K));
+            close(gcf);
+
+            if ~isempty(repGlobalIdx_u)
+                [~, ordCu] = sort(repClusterID_u, 'ascend');
+                repGlobalIdx_u = repGlobalIdx_u(ordCu);
+                repClusterID_u = repClusterID_u(ordCu);
+                repAxis_u = trap_region_plot_tick_labels( ...
+                    double(NodeSel.id(repGlobalIdx_u)), NodeSel.acronym(repGlobalIdx_u), C);
+                X_pool  = densLRSel(repGlobalIdx_u, idxPool);
+                Xzp_pool = zscore(X_pool, 0, 2);
+                delivery_pool = GroupDelivery(idxPool);
+                plot_region_density_with_clusters( ...
+                    X_pool, repAxis_u, delivery_pool, repClusterID_u, colors_u, ...
+                    sprintf('Region density (universal pooled, %s)', plotDepthTitle), ...
+                    fullfile(figDir, '02_rep_regions_RAW_density_universal_pooled.png'), ...
+                    sprintf(['Y = raw density. UNIVERSAL POOL: phases %s. X = representative regions (universal k-means).\n' ...
+                    'RED = Active, BLUE = Passive. Error bars = mean±SEM across all pooled mice.\n'], phPoolLabel));
+                plot_region_density_with_clusters( ...
+                    Xzp_pool, repAxis_u, delivery_pool, repClusterID_u, colors_u, ...
+                    sprintf('Region z-scored density (universal pooled, %s)', plotDepthTitle), ...
+                    fullfile(figDir, '03_rep_regions_ZSCORED_universal_pooled.png'), ...
+                    sprintf(['Y = z-score across universal pool (mean 0, std 1 per region across pooled mice). Phases: %s.\n'], ...
+                    phPoolLabel));
+
+                % Same representative regions, order, and universal C1–CK bars; data from each phase only
+                for phU = phasesToUse
+                    idxPhU = (GroupPhase == phU);
+                    if nnz(idxPhU) < 2
+                        continue;
+                    end
+                    phStr = char(strtrim(phU));
+                    X_raw_ph = densLRSel(repGlobalIdx_u, idxPhU);
+                    Xz_ph = zscore(X_raw_ph, 0, 2);
+                    delivery_ph = GroupDelivery(idxPhU);
+                    plot_region_density_with_clusters( ...
+                        X_raw_ph, repAxis_u, delivery_ph, repClusterID_u, colors_u, ...
+                        sprintf('Region density (%s, universal cluster layout, %s)', phStr, plotDepthTitle), ...
+                        fullfile(figDir, sprintf('02_rep_regions_RAW_density_universal_layout_%s.png', phStr)), ...
+                        sprintf(['Y = raw density. PHASE: %s only. X = same reps & cluster order as universal pooled plot.\n' ...
+                        'RED = Active, BLUE = Passive. Error bars = mean±SEM across mice in this phase.\n'], phStr));
+                    plot_region_density_with_clusters( ...
+                        Xz_ph, repAxis_u, delivery_ph, repClusterID_u, colors_u, ...
+                        sprintf('Region z-scored density (%s, universal cluster layout, %s)', phStr, plotDepthTitle), ...
+                        fullfile(figDir, sprintf('03_rep_regions_ZSCORED_universal_layout_%s.png', phStr)), ...
+                        sprintf(['Y = z-score within this phase (mean 0, std 1 per region across mice in this phase).\n' ...
+                        'PHASE: %s. Same x-order & universal cluster bars as 03_rep_regions_ZSCORED_universal_pooled.\n'], phStr));
+                end
+            end
+        end
+    end
+end
+
 fprintf("===== DONE TRAP_region_clusters_by_phase_density_v2 =====\n");
 
 %% 5. EXPORT DOWNSTREAM INPUT DATA
@@ -443,6 +632,10 @@ if isfield(C, 'v2_clustering_phases') && ~isempty(C.v2_clustering_phases)
     downData.v2_clustering_phases_config = C.v2_clustering_phases;
 end
 downData.v2_clustering_phases_used = phasesToUse;
+downData.universal_partition_applied = universal_partition_applied;
+downData.universal_cluster_id = universal_cluster_id; % length nRegionsSel; NaN = not clustered
+downData.universal_n_samples_pooled = universal_n_samples_pooled;
+downData.universal_partition_csv = fullfile(outDir, 'RegionCluster_universal_all_regions.csv');
 
 save(fullfile(outDir, "TRAP_downstream_input.mat"), "-struct", "downData");
 fprintf("Saved downstream input: %s\n", fullfile(outDir,"TRAP_downstream_input.mat"));
@@ -470,7 +663,7 @@ function phasesOut = trap_v2_resolve_clustering_phases(C, GroupPhase)
     end
     if isfield(C, 'phase5_phases') && ~isempty(C.phase5_phases)
         ord = string(C.phase5_phases(:))';
-        phasesOut = strings(0, 1);
+        phasesOut = strings(1, 0); % row: horzcat with ord(k) / u(k) (1x1 strings)
         for k = 1:numel(ord)
             if any(u == ord(k))
                 phasesOut = [phasesOut, ord(k)]; %#ok<AGROW>

@@ -10,9 +10,15 @@ function [densMean, Node, sampleNames, cohortIds, colNames] = trap_load_pooled_d
 %   columns (id, name, acronym, parent_structure_id, depth) are skipped. Order = readtable variable order
 %   per cohort (cohort 1, then cohort 2, …).
 %
+%   Step 00 cohort files: trap_read_cohort_paths_mouse_qc(C) — uses C.mouse_qc_cohortListFile when set.
+%
+%   Long Excel headers may exceed MATLAB namelengthmax (~63): readtable truncates VariableNames and stores
+%   the full string in VariableDescriptions. Filtering and manifest use the original header; data access
+%   uses VariableNames.
+%
 %   Labels (delivery / phase) are filled later by trap_mouse_qc_apply_manifest_labels (optional manifest).
 
-    paths = trap_read_cohort_paths(C);
+    paths = trap_read_cohort_paths_mouse_qc(C);
     metaCols = {'id', 'name', 'acronym', 'parent_structure_id', 'depth'};
 
     Tref = readtable(paths{1}, 'VariableNamingRule', 'preserve');
@@ -54,14 +60,15 @@ function [densMean, Node, sampleNames, cohortIds, colNames] = trap_load_pooled_d
         T = Tcoh{c};
         vn = T.Properties.VariableNames;
         for j = 1:numel(vn)
-            name = vn{j};
-            if ismember(name, metaCols)
+            varName = vn{j};
+            if ismember(varName, metaCols)
                 continue;
             end
-            if ~local_is_qc_density_sample_column(name, C)
+            headerLabel = local_qc_original_header_name(T, j);
+            if ~local_is_qc_density_sample_column(headerLabel, C)
                 continue;
             end
-            v = T.(name);
+            v = T.(varName);
             if ~(isnumeric(v) || islogical(v))
                 continue;
             end
@@ -72,15 +79,17 @@ function [densMean, Node, sampleNames, cohortIds, colNames] = trap_load_pooled_d
                 continue;
             end
             cohortIds(end + 1, 1) = c; %#ok<AGROW>
-            colNames{end + 1, 1} = name; %#ok<AGROW>
+            colNames{end + 1, 1} = headerLabel; %#ok<AGROW>
         end
     end
 
     nS = numel(cohortIds);
     if nS < 1
-        error(['trap_load_pooled_density_LR_all_csv_columns: no density sample columns found. ' ...
-            'Check column names contain "%s" (trap_config.mouse_qc_density_column_header_substring).'], ...
-            local_qc_density_substring(C));
+        sub = local_qc_density_substring(C);
+        msg = sprintf(['trap_load_pooled_density_LR_all_csv_columns: no density sample columns found. ' ...
+            'No column name contains substring "%s" (mouse_qc_density_column_header_substring).'], sub);
+        msg = sprintf('%s\n%s', msg, local_qc_zero_columns_hint(paths, metaCols, C));
+        error('%s', msg);
     end
 
     D = nan(nRow, nS);
@@ -91,8 +100,7 @@ function [densMean, Node, sampleNames, cohortIds, colNames] = trap_load_pooled_d
         col = colNames{k};
         T = Tcoh{ci};
         loc = rowMaps{ci};
-        vn = T.Properties.VariableNames;
-        jcol = find(strcmp(vn, col), 1);
+        jcol = trap_find_table_column_index_by_header(T, col);
         if isempty(jcol)
             error('Internal: column "%s" missing in cohort %d.', col, ci);
         end
@@ -141,6 +149,61 @@ function sub = local_qc_density_substring(C)
     sub = 'density (cells/mm^3)';
     if isfield(C, 'mouse_qc_density_column_header_substring') && ~isempty(strtrim(char(string(C.mouse_qc_density_column_header_substring))))
         sub = char(strtrim(string(C.mouse_qc_density_column_header_substring)));
+    end
+end
+
+function hint = local_qc_zero_columns_hint(paths, metaCols, C)
+    hint = '';
+    if numel(paths) < 1
+        return;
+    end
+    v = '';
+    if isfield(C, 'trap_output_density_variant') && ~isempty(strtrim(char(string(C.trap_output_density_variant))))
+        v = lower(strtrim(char(string(C.trap_output_density_variant))));
+    end
+    if strcmp(v, 'calculated_mm3')
+        hint = [hint sprintf(['For trap_output_density_variant=calculated_mm3, every cohort file in TRAP_cohort_CSVs.txt ' ...
+            'must include per-mouse density columns whose names match your trap_density_suffix_calculated ' ...
+            '(default ends with cells/sample volume in mm^3). Exports that only have Allen ' ...
+            '''density (cells/mm^3)'' (no second density family) will match zero columns.\n'])];
+    end
+    try
+        T = readtable(paths{1}, 'VariableNamingRule', 'preserve');
+        vn = T.Properties.VariableNames;
+        take = {};
+        for j = 1:numel(vn)
+            nm = vn{j};
+            if ismember(nm, metaCols)
+                continue;
+            end
+            if contains(lower(nm), 'average')
+                continue;
+            end
+            take{end + 1, 1} = nm; %#ok<AGROW>
+            if numel(take) >= 10
+                break;
+            end
+        end
+        if ~isempty(take)
+            hint = [hint sprintf('Cohort 1 ("%s") — sample data column names:\n  ', char(paths{1})) ...
+                strjoin(take, sprintf('\n  '))];
+        end
+    catch %#ok<CTCH>
+    end
+end
+
+function nm = local_qc_original_header_name(T, j)
+    vn = T.Properties.VariableNames{j};
+    vd = T.Properties.VariableDescriptions;
+    if isempty(vd) || numel(vd) < j
+        nm = vn;
+        return;
+    end
+    d = strtrim(vd{j});
+    if isempty(d) || strcmp(d, vn)
+        nm = vn;
+    else
+        nm = d;
     end
 end
 

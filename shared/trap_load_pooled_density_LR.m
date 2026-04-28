@@ -7,14 +7,18 @@ function [densMean, Node, sampleNames, GroupDelivery, GroupPhase] = trap_load_po
 %
 %   TRAP_sample_manifest.csv must list every sample column you want in Steps 1+:
 %     cohort_id, column_name, delivery, phase, include, …
-%   column_name = exact table header in that cohort file. If exports include count / density / volume per
-%   mouse, list the **density** column for TRAP (e.g. *... density (cells/mm^3)*), not count or volume.
+%   column_name = exact table header in that cohort file, OR any form sharing the same text before '('
+%   (e.g. … density) when trap_output_density_variant is allen_mm3 / calculated_mm3 — then the loader
+%   appends ' (cells/mm^3)' vs ' (cells/sample volume in mm^3)' (see trap_config trap_density_suffix_*).
 %   cohort_id = 1 → first line of TRAP_cohort_CSVs.txt, 2 → second file, …
 %   Atlas ids: cohort 1 (first file) defines the reference row order. Other cohorts should match;
 %   if C.cohort_require_identical_atlas is false (default), missing ids in a cohort → NaN for those
 %   regions for samples drawn from that file (warning printed). Set cohort_require_identical_atlas true
 %   to error instead (strict same row set in every export).
-%   Default list: TRAP_cohort_CSVs.txt → 561_1st.csv (cohort 1) + 561_2nd.xlsx (cohort 2).
+%   Default list: TRAP_cohort_CSVs.txt (use one combined xlsx + manifest cohort_id for labels only).
+%
+%   If only one cohort file is listed, every manifest row loads from that file; cohort_id is still used
+%   for sampleNames (C1__, C2__, …) but must be a positive integer (not the file index).
 
     paths = trap_read_cohort_paths(C);
     if ~isfile(C.manifestPath)
@@ -75,21 +79,35 @@ function [densMean, Node, sampleNames, GroupDelivery, GroupPhase] = trap_load_po
     GroupPhase = strings(nS, 1);
 
     for k = 1:nS
-        ci = M.cohort_id(k);
-        if isstring(ci) || ischar(ci)
-            ci = str2double(char(strtrim(ci)));
+        ciManifest = M.cohort_id(k);
+        if isstring(ciManifest) || ischar(ciManifest)
+            ciManifest = str2double(char(strtrim(ciManifest)));
         end
-        if isnan(ci) || ci < 1 || ci > numel(paths) || fix(ci) ~= ci
-            error('Manifest row %d: invalid cohort_id (need 1..%d)', k, numel(paths));
+        if isnan(ciManifest) || ciManifest < 1 || fix(ciManifest) ~= ciManifest
+            error('Manifest row %d: invalid cohort_id (need positive integer)', k);
         end
-        ci = fix(ci);
-        col = char(strtrim(M.column_name(k)));
-        T = Tcoh{ci};
-        loc = rowMaps{ci};
-        vn = T.Properties.VariableNames;
-        jcol = find(strcmp(vn, col), 1);
+        ciManifest = fix(ciManifest);
+        if numel(paths) > 1
+            if ciManifest > numel(paths)
+                error('Manifest row %d: cohort_id %d exceeds number of cohort files (%d)', k, ciManifest, numel(paths));
+            end
+            ciFile = ciManifest;
+        else
+            ciFile = 1;
+        end
+        colManifest = char(strtrim(M.column_name(k)));
+        col = trap_resolve_manifest_density_column(colManifest, C);
+        T = Tcoh{ciFile};
+        loc = rowMaps{ciFile};
+        jcol = trap_find_table_column_index_by_header(T, col);
+        if isempty(jcol) && ~strcmp(col, colManifest)
+            jcol = trap_find_table_column_index_by_header(T, colManifest);
+            if ~isempty(jcol)
+                col = colManifest;
+            end
+        end
         if isempty(jcol)
-            error('Column not in cohort %d CSV: "%s"', ci, col);
+            error('Column not in cohort file %d: "%s" (manifest column_name was "%s")', ciFile, col, colManifest);
         end
         colData = nan(nRow, 1);
         okRow = loc > 0;
@@ -97,7 +115,7 @@ function [densMean, Node, sampleNames, GroupDelivery, GroupPhase] = trap_load_po
             colData(okRow) = T{loc(okRow), jcol};
         end
         D(:, k) = colData;
-        sampleNames(k) = "C" + string(ci) + "__" + string(M.column_name(k));
+        sampleNames(k) = "C" + string(ciManifest) + "__" + string(col);
         GroupDelivery(k) = string(strtrim(M.delivery(k)));
         GroupPhase(k) = trap_normalize_manifest_phase(M.phase(k));
     end

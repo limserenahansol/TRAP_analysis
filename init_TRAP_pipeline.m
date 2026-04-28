@@ -18,6 +18,8 @@ function init_TRAP_pipeline()
         'Step_04_downstream_flip'
         'Step_05_utilities'
         'Step_06_phase_AP_contrasts'
+        'Step_12_per_group_topN'
+        'Step_13_universal_cluster_viz'
         };
     for k = 1:numel(steps)
         p = fullfile(here, steps{k});

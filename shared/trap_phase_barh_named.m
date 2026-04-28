@@ -42,6 +42,26 @@ function trap_phase_barh_named(Tsub, titleStr, pngPath, readmeTxt, nmax, use_fdr
         xlabel('mean(Active) − mean(Passive)  [cells/mm³]');
     end
     xline(0, 'Color', 'k', 'LineWidth', 1);
+    pad = 0.05 * max(abs([md(:); 1]), [], 'omitnan');
+    if ~isfinite(pad) || pad <= 0, pad = 0.01; end
+    mdF = md(isfinite(md));
+    if isempty(mdF)
+        xr = pad;
+    else
+        xr = max(mdF) + pad;
+    end
+    if ~isfinite(xr), xr = pad; end
+    for k = 1:n
+        if use_fdr
+            pv = Tsub.q_AP(k);
+            pl = sprintf('q=%.3g%s', pv, trap_signif_stars(pv));
+        else
+            pv = Tsub.p_AP(k);
+            pl = sprintf('p=%.3g%s', pv, trap_signif_stars(pv));
+        end
+        text(xr, k, pl, 'VerticalAlignment', 'middle', 'FontSize', 8, 'Interpreter', 'none');
+    end
+    xlim([min([0; md(:)]) - 3 * pad, xr + 8 * pad]);
     sub = 'Each row = region passing Active vs Passive test in that phase only';
     if use_fdr
         sub = [sub '; significance = FDR across all regions'];
@@ -51,6 +71,6 @@ function trap_phase_barh_named(Tsub, titleStr, pngPath, readmeTxt, nmax, use_fdr
     title({[titleStr suf]; sub}, 'Interpreter', 'none', 'FontSize', 11);
     grid on;
     trap_export_figure(gcf, pngPath, [readmeTxt newline ...
-        'CSV lists p_AP, q_AP (BH/BY of p for reference).']);
+        'CSV lists p_AP, q_AP, p_AP_ttest2, q_AP_ttest2. * p<.05 ** p<.01 *** p<.001 (nominal).']);
     close(gcf);
 end

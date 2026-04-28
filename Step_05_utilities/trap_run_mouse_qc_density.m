@@ -3,8 +3,8 @@ function trap_run_mouse_qc_density(userC)
 %
 %   DEFAULT (mouse_qc_use_all_csv_columns = true): loads **density** sample columns only (header must
 %   contain mouse_qc_density_column_header_substring, default 'density (cells/mm^3)'; skips count/volume/
-%   AVERAGE columns). No manifest row is required to **include** a mouse — e.g. all mice from
-%   two exports appear in Step 00. Optional TRAP_sample_manifest.csv matches cohort_id + column_name to
+%   AVERAGE columns). Cohort files: mouse_qc_cohortListFile (default TRAP_mouse_QC_cohort_files.txt) when
+%   present; else TRAP_cohort_CSVs.txt. Optional TRAP_sample_manifest.csv matches cohort_id + column_name to
 %   fill delivery / phase / mouse_id; if a row exists with include=0, that sample is dropped (same rule
 %   as Steps 1+). Columns without a manifest row get Unknown labels and leaf = C#__column.
 %   Set mouse_qc_use_all_csv_columns = false to use only manifest include=1 samples (same column set as

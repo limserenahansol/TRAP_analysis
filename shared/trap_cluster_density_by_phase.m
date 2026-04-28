@@ -1,0 +1,143 @@
+function trap_cluster_density_by_phase(densWork, GroupDelivery, GroupPhase, clusterIds, NodeSel, outDir, scaleLab, C)
+%TRAP_CLUSTER_DENSITY_BY_PHASE  Per-cluster bar chart: mean density across phases, Active vs Passive.
+%   For each cluster, regions are averaged to give one value per mouse per phase.
+%   Grouped bar chart: X = phases, Active (red) vs Passive (blue), SEM + scatter.
+%   Saves one PNG per cluster + summary CSV to outDir.
+
+    trap_ensure_dir(outDir);
+
+    validMask = ~isnan(clusterIds) & isfinite(clusterIds);
+    uCl = unique(clusterIds(validMask));
+    K = numel(uCl);
+
+    canonOrder = ["Baseline", "During", "Post", "Withdrawal", "Reinstatement"];
+    avail = unique(GroupPhase, 'stable');
+    avail = avail(~ismember(avail, ["Exclude", "Unknown", ""]) & strlength(strtrim(avail)) > 0);
+    phases = strings(0, 1);
+    for ip = 1:numel(canonOrder)
+        ph = canonOrder(ip);
+        if any(avail == ph) && any(GroupPhase == ph & GroupDelivery == "Active") && ...
+                any(GroupPhase == ph & GroupDelivery == "Passive")
+            phases(end + 1) = ph; %#ok<AGROW>
+        end
+    end
+    for ip = 1:numel(avail)
+        if ~any(phases == avail(ip)) && any(GroupPhase == avail(ip) & GroupDelivery == "Active") && ...
+                any(GroupPhase == avail(ip) & GroupDelivery == "Passive")
+            phases(end + 1) = avail(ip); %#ok<AGROW>
+        end
+    end
+    nP = numel(phases);
+    if nP < 1
+        trap_export_placeholder_figure(fullfile(outDir, 'Cluster1_density_by_phase.png'), ...
+            'Cluster density by phase', 'No phases with both Active and Passive mice.');
+        return;
+    end
+
+    summRows = {};
+
+    for ki = 1:K
+        cid = uCl(ki);
+        regMask = clusterIds == cid;
+        nReg = nnz(regMask);
+        if nReg < 1, continue; end
+
+        muAct = nan(nP, 1);
+        muPas = nan(nP, 1);
+        seAct = nan(nP, 1);
+        sePas = nan(nP, 1);
+        valsAct = cell(nP, 1);
+        valsPas = cell(nP, 1);
+        nActPh = zeros(nP, 1);
+        nPasPh = zeros(nP, 1);
+
+        for ip = 1:nP
+            ph = phases(ip);
+            mPh = GroupPhase == ph;
+            mA = mPh & GroupDelivery == "Active";
+            mP = mPh & GroupDelivery == "Passive";
+
+            Xa = densWork(regMask, mA);
+            Xp = densWork(regMask, mP);
+
+            va = mean(Xa, 1, 'omitnan')';
+            vp = mean(Xp, 1, 'omitnan')';
+            va = va(isfinite(va));
+            vp = vp(isfinite(vp));
+
+            valsAct{ip} = va;
+            valsPas{ip} = vp;
+            nActPh(ip) = numel(va);
+            nPasPh(ip) = numel(vp);
+            muAct(ip) = mean(va);
+            muPas(ip) = mean(vp);
+            seAct(ip) = std(va) / sqrt(max(1, numel(va)));
+            sePas(ip) = std(vp) / sqrt(max(1, numel(vp)));
+
+            summRows{end + 1} = {cid, char(ph), 'Active', muAct(ip), seAct(ip), nActPh(ip)}; %#ok<AGROW>
+            summRows{end + 1} = {cid, char(ph), 'Passive', muPas(ip), sePas(ip), nPasPh(ip)}; %#ok<AGROW>
+        end
+
+        figW = max(560, 120 * nP + 200);
+        figure('Color', 'w', 'Position', [80 80 figW 520]);
+        hold on;
+
+        bw = 0.32;
+        jw = 0.08;
+
+        for ip = 1:nP
+            xa = ip - 0.22;
+            xp = ip + 0.22;
+            bar(xa, muAct(ip), bw, 'FaceColor', [0.82 0.18 0.12], ...
+                'EdgeColor', [0.25 0.25 0.25], 'LineWidth', 0.6);
+            bar(xp, muPas(ip), bw, 'FaceColor', [0.12 0.38 0.78], ...
+                'EdgeColor', [0.25 0.25 0.25], 'LineWidth', 0.6);
+            errorbar(xa, muAct(ip), seAct(ip), 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 8);
+            errorbar(xp, muPas(ip), sePas(ip), 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 8);
+
+            va = valsAct{ip};
+            vp = valsPas{ip};
+            rng(1000 * ki + ip);
+            if ~isempty(va)
+                scatter(xa + jw * (rand(size(va)) - 0.5), va, 48, [0.82 0.18 0.12], 'filled', ...
+                    'MarkerEdgeColor', [0.12 0.12 0.12], 'LineWidth', 0.4, 'MarkerFaceAlpha', 0.88);
+            end
+            if ~isempty(vp)
+                scatter(xp + jw * (rand(size(vp)) - 0.5), vp, 48, [0.12 0.38 0.78], 'filled', ...
+                    'MarkerEdgeColor', [0.12 0.12 0.12], 'LineWidth', 0.4, 'MarkerFaceAlpha', 0.88);
+            end
+        end
+
+        set(gca, 'XTick', 1:nP, 'XTickLabel', cellstr(phases), ...
+            'TickLabelInterpreter', 'none', 'FontSize', 10);
+        xlim([0.35, nP + 0.65]);
+        grid on;
+
+        if contains(lower(scaleLab), 'z')
+            ylabel('mean z-scored density (cluster average)');
+        else
+            ylabel('mean density [cells/mm^3] (cluster average)');
+        end
+        title(sprintf('Cluster %d (%d regions) — density by phase (%s)', cid, nReg, scaleLab), ...
+            'Interpreter', 'none', 'FontSize', 11);
+
+        h1 = patch(NaN, NaN, [0.82 0.18 0.12]);
+        h2 = patch(NaN, NaN, [0.12 0.38 0.78]);
+        legend([h1, h2], {'Active', 'Passive'}, 'Location', 'southoutside', ...
+            'Orientation', 'horizontal', 'Interpreter', 'none', 'Box', 'on');
+
+        pngPath = fullfile(outDir, sprintf('Cluster%d_density_by_phase.png', cid));
+        readmeTxt = sprintf(['Cluster %d (%d regions): mean density across phases.\n' ...
+            'Each dot = one mouse (mean across cluster regions). Bars = group mean, SEM.\n' ...
+            'Scale: %s. Active (red) vs Passive (blue).'], cid, nReg, scaleLab);
+        trap_export_figure(gcf, pngPath, readmeTxt);
+        close(gcf);
+    end
+
+    if ~isempty(summRows)
+        rows = vertcat(summRows{:});
+        Tsum = table([rows{:, 1}]', rows(:, 2), rows(:, 3), [rows{:, 4}]', [rows{:, 5}]', [rows{:, 6}]', ...
+            'VariableNames', {'cluster', 'phase', 'delivery', 'mean_density', 'sem', 'n_mice'});
+        writetable(Tsum, fullfile(outDir, 'cluster_phase_density_summary.csv'));
+    end
+end

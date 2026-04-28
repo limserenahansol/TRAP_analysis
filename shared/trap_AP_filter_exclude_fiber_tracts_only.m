@@ -1,17 +1,20 @@
-function [densMean, Node, msg] = trap_AP_filter_forebrain_exclude_fiber_wm(densMean, Node, C)
-% Forebrain (excl. CB / brainstem except TH,HY) + aggressive fiber / WM drop for Step 9.
-%   1) Allen "Fiber tracts" subtree (BFS from fiber roots in cohort CSV).
-%   2) Name keywords (alveus, fimbria, lemniscus, mammillary tracts, olfactory tract, …).
-%   3) Acronym blocklist (mtg, pm, mp, lot, fr, …) — strips -L/-R before match.
+function [densMean, Node, msg] = trap_AP_filter_exclude_fiber_tracts_only(densMean, Node, C)
+%TRAP_AP_FILTER_EXCLUDE_FIBER_TRACTS_ONLY  Keep all gray-matter regions, drop fiber tracts, WM, and ventricles.
+%   Unlike trap_AP_filter_forebrain_exclude_fiber_wm, brainstem and cerebellum regions are KEPT.
+%   Exclusions:
+%     1) Allen "Fiber tracts" subtree (BFS from fiber root IDs in cohort CSV).
+%     2) Name keywords (alveus, fimbria, corpus callosum, capsule, lemniscus, fasciculus, ...).
+%     3) Acronym blocklist (mtg, pm, mp, lot, fr, fx, fi, ...).
+%     4) Ancestor name walk for tract/WM.
+%     5) Ventricular / non-tissue structures (ventricles, aqueduct, choroid plexus, central canal).
 
     paths = trap_read_cohort_paths(C);
     T = readtable(paths{1}, 'VariableNamingRule', 'preserve');
-    S = trap_region_build_atlas_maps(paths{1});
     idToName = local_id_to_name_map(T);
     inFiberTree = local_fiber_tract_descendant_map(T);
+    S = trap_region_build_atlas_maps(paths{1});
     n = height(Node);
     keep = false(n, 1);
-    nFb = 0;
     nFib = 0;
     nName = 0;
     nAcr = 0;
@@ -21,10 +24,6 @@ function [densMean, Node, msg] = trap_AP_filter_forebrain_exclude_fiber_wm(densM
         id = double(Node.id(i));
         if local_is_ventricular(Node.acronym(i), Node.name(i))
             nVent = nVent + 1;
-            continue;
-        end
-        if ~trap_AP_atlas_keep_forebrain_step9(id, S)
-            nFb = nFb + 1;
             continue;
         end
         if isKey(inFiberTree, id) && inFiberTree(id)
@@ -49,9 +48,9 @@ function [densMean, Node, msg] = trap_AP_filter_forebrain_exclude_fiber_wm(densM
     n0 = n;
     Node = Node(keep, :);
     densMean = densMean(keep, :);
-    msg = sprintf(['Step9 filter (gray-matter forebrain): %d -> %d regions. ' ...
-        'Dropped: %d non-forebrain, %d fiber-tree, %d tract/WM by name, %d by acronym, %d by ancestor name, %d ventricle/non-tissue.'], ...
-        n0, height(Node), nFb, nFib, nName, nAcr, nAnc, nVent);
+    msg = sprintf(['Whole brain excl. fiber tracts: %d -> %d regions. ' ...
+        'Dropped: %d fiber-tree, %d tract/WM by name, %d by acronym, %d by ancestor name, %d ventricle/non-tissue.'], ...
+        n0, height(Node), nFib, nName, nAcr, nAnc, nVent);
 end
 
 function M = local_id_to_name_map(T)
@@ -120,12 +119,10 @@ end
 
 function tf = local_tract_or_wm_by_name(nm)
     nm = char(lower(strtrim(string(nm))));
-    % WM sheets (hippocampus; not always under fiber root)
     if contains(nm, 'alveus'), tf = true; return; end
     if contains(nm, 'fimbria'), tf = true; return; end
     if contains(nm, 'dorsal hippocampal commissure'), tf = true; return; end
     if contains(nm, 'ventral hippocampal commissure'), tf = true; return; end
-    % Capsules / CC / peduncles / lemniscus
     if contains(nm, 'internal capsule') || contains(nm, 'external capsule') || contains(nm, 'extreme capsule')
         tf = true;
         return;
@@ -134,7 +131,6 @@ function tf = local_tract_or_wm_by_name(nm)
     if contains(nm, 'cerebral peduncle'), tf = true; return; end
     if contains(nm, 'lateral lemniscus') || contains(nm, 'medial lemniscus'), tf = true; return; end
     if contains(nm, 'fasciculus'), tf = true; return; end
-    % Mammillary / tegmental fiber paths (often under HY, not fiber root)
     if contains(nm, 'mammillotegmental'), tf = true; return; end
     if contains(nm, 'principal mammillary tract') || contains(nm, 'principal mammillary')
         tf = true;
@@ -143,7 +139,6 @@ function tf = local_tract_or_wm_by_name(nm)
     if contains(nm, 'mammillary peduncle'), tf = true; return; end
     if contains(nm, 'mammillothalamic tract'), tf = true; return; end
     if contains(nm, 'fasciculus retroflexus') || contains(nm, 'retroflex'), tf = true; return; end
-    % Olfactory tract (fiber); keep nucleus of the lateral olfactory tract (gray)
     if contains(nm, 'olfactory tract') && ~contains(nm, 'nucleus of the lateral olfactory')
         tf = true;
         return;
@@ -168,12 +163,10 @@ function tf = local_tract_or_wm_by_name(nm)
 end
 
 function tf = local_blocked_fiber_acronym(acr)
-    % Base acronym: strip hemisphere / layer suffix noise
     a = lower(strtrim(string(acr)));
     a = erase(a, '-L');
     a = erase(a, '-R');
     a = char(strtrim(a));
-    % Known tract / fragment acronyms (Allen-style); vda = repeated non-anatomical rows in some CSVs
     deny = { ...
         'mtg', 'pm', 'mp', 'lot', 'lo', 'fr', 'fx', 'fi', 'dhc', 'alv', 'mfb', 'mlf', ...
         'ml', 'll', 'mtt', 'df', 'fxs', 'lotg', 'lotd', 'mfbsma', 'vda', 'lot1', 'lot2', 'lot3', 'lotv'};
@@ -199,4 +192,3 @@ function tf = local_is_ventricular(acr, nm)
     end
     tf = false;
 end
-
