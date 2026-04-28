@@ -1,11 +1,15 @@
-function trap_cluster_k_sanity_universal(densRaw, GroupPhase, clusterIds, outDir, C, phasesUsed, kmRep)
-%TRAP_CLUSTER_K_SANITY_UNIVERSAL  Silhouette + within-cluster SS vs K on universal-partition feature space.
+function trap_cluster_k_sanity_universal(densRaw, GroupPhase, clusterIds, outDir, C, phasesUsed, kmRep, storedLegendEntry)
+%TRAP_CLUSTER_K_SANITY_UNIVERSAL  Silhouette + variance-explained (k-means) vs K on universal-partition space.
 %   Matches Step 3 TRAP_region_clusters_by_phase_density_v2 universal pool:
 %   z-score each region across samples pooled over phasesUsed (same columns as k-means there).
 %
 %   Writes k_evaluation/03_k_sanity_silhouette_elbow.png and .csv
 
     trap_ensure_dir(outDir);
+
+    if nargin < 8
+        storedLegendEntry = [];
+    end
 
     if nargin < 7 || isempty(kmRep)
         if isfield(C, 'v2_kmeans_replicates') && ~isempty(C.v2_kmeans_replicates)
@@ -49,6 +53,9 @@ function trap_cluster_k_sanity_universal(densRaw, GroupPhase, clusterIds, outDir
         return;
     end
 
+    muG = mean(Xz, 1);
+    TSS = sum(sum((Xz - muG).^2, 2));
+
     kMaxCfg = 10;
     if isfield(C, 'step13_k_eval_max_k') && ~isempty(C.step13_k_eval_max_k)
         kMaxCfg = max(2, round(double(C.step13_k_eval_max_k)));
@@ -86,8 +93,14 @@ function trap_cluster_k_sanity_universal(densRaw, GroupPhase, clusterIds, outDir
 
     Kcurr = numel(unique(labStored));
 
-    Tout = table(ks, silMeans, twss, ...
-        'VariableNames', {'k', 'mean_silhouette_kmeans_rerun', 'total_within_SS'});
+    if TSS > 1e-24
+        pctVarKm = 100 * (TSS - twss) / TSS;
+    else
+        pctVarKm = nan(size(twss));
+    end
+
+    Tout = table(ks, silMeans, twss, pctVarKm, ...
+        'VariableNames', {'k', 'mean_silhouette_kmeans_rerun', 'total_within_SS', 'pct_variance_explained_kmeans'});
     writetable(Tout, fullfile(outDir, 'k_sanity_by_k.csv'));
 
     T2 = table(Kcurr, silStored, ...
@@ -104,20 +117,27 @@ function trap_cluster_k_sanity_universal(densRaw, GroupPhase, clusterIds, outDir
     ylabel('Mean silhouette');
     title('Silhouette vs k (rerun k-means on pool-z regions)');
     hold on;
+    if isempty(storedLegendEntry)
+        legEntry = sprintf('stored Step 3 labels (K=%d)', Kcurr);
+    else
+        legEntry = char(storedLegendEntry);
+    end
+
     if isfinite(silStored)
         yline(silStored, '--', 'LineWidth', 1.2, 'Color', [0.85 0.35 0.2]);
-        legend({'mean silhouette (k-means rerun)', sprintf('stored Step 3 labels (K=%d)', Kcurr)}, ...
+        legend({'mean silhouette (k-means rerun)', legEntry}, ...
             'Location', 'southoutside', 'Interpreter', 'none');
     else
         legend({'mean silhouette (k-means rerun)'}, 'Location', 'southoutside', 'Interpreter', 'none');
     end
 
     nexttile;
-    plot(ks, twss, '-s', 'LineWidth', 1.4, 'MarkerFaceColor', [0.35 0.65 0.35]);
+    plot(ks, pctVarKm, '-s', 'LineWidth', 1.4, 'MarkerFaceColor', [0.35 0.65 0.35]);
     grid on;
     xlabel('k (k-means)');
-    ylabel('Total within-cluster SS');
-    title('Elbow: within-cluster scatter vs k');
+    ylabel('% variance explained (k-means)');
+    title('Elbow: (TSS − WSS) / TSS vs k');
+    ylim([0 100]);
 
     sgtitle(sprintf(['Universal pool feature space (Step 3 match): z-score across {%s} (%d samples, %d regions)'], ...
         strjoin(phasesUsed, ', '), nnz(idxPool), n), 'FontSize', 11, 'Interpreter', 'none');
@@ -127,9 +147,10 @@ function trap_cluster_k_sanity_universal(densRaw, GroupPhase, clusterIds, outDir
         'Rows = regions with Step 3 cluster labels (after zero-variance drop).\n' ...
         'Columns = all samples with Phase in {%s}; each row z-scored across those samples.\n' ...
         'For each k, k-means was rerun (rng 42, Replicates=%d) — not identical to Step 3''s single run.\n' ...
-        'Orange dashed line = mean silhouette using stored Step 3 cluster IDs (K=%d).\n' ...
-        'Higher silhouette often favors moderate k; elbow plot shows diminishing returns for splitting.\n'], ...
-        strjoin(phasesUsed, ', '), kmRep, Kcurr);
+        'Orange dashed line = mean silhouette using the partition used for this tree (%s).\n' ...
+        'Elbow Y = %% variance of the pool-z feature matrix explained by k-means ( (TSS−WSS)/TSS ); not PCA %%.\n' ...
+        'Higher silhouette often favors moderate k; elbow shows diminishing returns for splitting.\n'], ...
+        strjoin(phasesUsed, ', '), kmRep, legEntry);
 
     trap_export_figure(gcf, fullfile(outDir, '03_k_sanity_silhouette_elbow.png'), readmeTxt);
     close(gcf);

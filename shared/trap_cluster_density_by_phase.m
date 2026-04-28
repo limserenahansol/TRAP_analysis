@@ -3,6 +3,10 @@ function trap_cluster_density_by_phase(densWork, GroupDelivery, GroupPhase, clus
 %   For each cluster, regions are averaged to give one value per mouse per phase.
 %   Grouped bar chart: X = phases, Active (red) vs Passive (blue), SEM + scatter.
 %   Saves one PNG per cluster + summary CSV to outDir.
+%
+%   Optional (trap_config.step13_density_AP_up_all_phases_only = true):
+%     Average only regions where mean(Active) > mean(Passive) at every phase (same phase list as bars).
+%     Writes Cluster*_density_by_phase_APgtP_allPhases.png and regions_Active_gt_Passive_all_phases.csv.
 
     trap_ensure_dir(outDir);
 
@@ -10,23 +14,7 @@ function trap_cluster_density_by_phase(densWork, GroupDelivery, GroupPhase, clus
     uCl = unique(clusterIds(validMask));
     K = numel(uCl);
 
-    canonOrder = ["Baseline", "During", "Post", "Withdrawal", "Reinstatement"];
-    avail = unique(GroupPhase, 'stable');
-    avail = avail(~ismember(avail, ["Exclude", "Unknown", ""]) & strlength(strtrim(avail)) > 0);
-    phases = strings(0, 1);
-    for ip = 1:numel(canonOrder)
-        ph = canonOrder(ip);
-        if any(avail == ph) && any(GroupPhase == ph & GroupDelivery == "Active") && ...
-                any(GroupPhase == ph & GroupDelivery == "Passive")
-            phases(end + 1) = ph; %#ok<AGROW>
-        end
-    end
-    for ip = 1:numel(avail)
-        if ~any(phases == avail(ip)) && any(GroupPhase == avail(ip) & GroupDelivery == "Active") && ...
-                any(GroupPhase == avail(ip) & GroupDelivery == "Passive")
-            phases(end + 1) = avail(ip); %#ok<AGROW>
-        end
-    end
+    phases = trap_cluster_AP_phase_list(GroupPhase, GroupDelivery);
     nP = numel(phases);
     if nP < 1
         trap_export_placeholder_figure(fullfile(outDir, 'Cluster1_density_by_phase.png'), ...
@@ -34,13 +22,36 @@ function trap_cluster_density_by_phase(densWork, GroupDelivery, GroupPhase, clus
         return;
     end
 
+    useFilt = isfield(C, 'step13_density_AP_up_all_phases_only') && ...
+        ~isempty(C.step13_density_AP_up_all_phases_only) && logical(C.step13_density_AP_up_all_phases_only);
+    if useFilt
+        apUpMask = trap_cluster_rowmask_AP_gt_P_all_phases(densWork, GroupDelivery, GroupPhase, phases);
+    else
+        apUpMask = true(size(densWork, 1), 1);
+    end
+
+    if useFilt && any(apUpMask & validMask)
+        Tlist = table(clusterIds(apUpMask & validMask), double(NodeSel.id(apUpMask & validMask)), ...
+            cellstr(string(NodeSel.acronym(apUpMask & validMask))), ...
+            'VariableNames', {'cluster', 'id', 'acronym'});
+        writetable(Tlist, fullfile(outDir, 'regions_Active_gt_Passive_all_phases.csv'));
+    end
+
     summRows = {};
 
     for ki = 1:K
         cid = uCl(ki);
-        regMask = clusterIds == cid;
+        regMask = clusterIds == cid & apUpMask;
         nReg = nnz(regMask);
-        if nReg < 1, continue; end
+        if nReg < 1
+            if useFilt
+                trap_export_placeholder_figure(fullfile(outDir, ...
+                    sprintf('Cluster%d_density_by_phase_APgtP_allPhases.png', cid)), ...
+                    sprintf('Cluster %d (AP filter)', cid), ...
+                    'No regions in this cluster with mean(Active) > mean(Passive) at every phase.');
+            end
+            continue;
+        end
 
         muAct = nan(nP, 1);
         muPas = nan(nP, 1);
@@ -118,18 +129,31 @@ function trap_cluster_density_by_phase(densWork, GroupDelivery, GroupPhase, clus
         else
             ylabel('mean density [cells/mm^3] (cluster average)');
         end
-        title(sprintf('Cluster %d (%d regions) — density by phase (%s)', cid, nReg, scaleLab), ...
-            'Interpreter', 'none', 'FontSize', 11);
+
+        if useFilt
+            ttl = sprintf('Cluster %d (%d regions; Active>Passive every phase) — density by phase (%s)', ...
+                cid, nReg, scaleLab);
+        else
+            ttl = sprintf('Cluster %d (%d regions) — density by phase (%s)', cid, nReg, scaleLab);
+        end
+        title(ttl, 'Interpreter', 'none', 'FontSize', 11);
 
         h1 = patch(NaN, NaN, [0.82 0.18 0.12]);
         h2 = patch(NaN, NaN, [0.12 0.38 0.78]);
         legend([h1, h2], {'Active', 'Passive'}, 'Location', 'southoutside', ...
             'Orientation', 'horizontal', 'Interpreter', 'none', 'Box', 'on');
 
-        pngPath = fullfile(outDir, sprintf('Cluster%d_density_by_phase.png', cid));
-        readmeTxt = sprintf(['Cluster %d (%d regions): mean density across phases.\n' ...
-            'Each dot = one mouse (mean across cluster regions). Bars = group mean, SEM.\n' ...
-            'Scale: %s. Active (red) vs Passive (blue).'], cid, nReg, scaleLab);
+        if useFilt
+            pngPath = fullfile(outDir, sprintf('Cluster%d_density_by_phase_APgtP_allPhases.png', cid));
+            readmeTxt = sprintf(['Cluster %d (%d regions): only regions with mean(Active) > mean(Passive) at every phase ' ...
+                'in {%s}.\nEach dot = one mouse (mean across included regions). Bars = group mean, SEM.\n' ...
+                'Scale: %s.\n'], cid, nReg, strjoin(phases, ', '), scaleLab);
+        else
+            pngPath = fullfile(outDir, sprintf('Cluster%d_density_by_phase.png', cid));
+            readmeTxt = sprintf(['Cluster %d (%d regions): mean density across phases.\n' ...
+                'Each dot = one mouse (mean across cluster regions). Bars = group mean, SEM.\n' ...
+                'Scale: %s. Active (red) vs Passive (blue).'], cid, nReg, scaleLab);
+        end
         trap_export_figure(gcf, pngPath, readmeTxt);
         close(gcf);
     end
@@ -138,6 +162,10 @@ function trap_cluster_density_by_phase(densWork, GroupDelivery, GroupPhase, clus
         rows = vertcat(summRows{:});
         Tsum = table([rows{:, 1}]', rows(:, 2), rows(:, 3), [rows{:, 4}]', [rows{:, 5}]', [rows{:, 6}]', ...
             'VariableNames', {'cluster', 'phase', 'delivery', 'mean_density', 'sem', 'n_mice'});
-        writetable(Tsum, fullfile(outDir, 'cluster_phase_density_summary.csv'));
+        if useFilt
+            writetable(Tsum, fullfile(outDir, 'cluster_phase_density_summary_APgtP_allPhases.csv'));
+        else
+            writetable(Tsum, fullfile(outDir, 'cluster_phase_density_summary.csv'));
+        end
     end
 end

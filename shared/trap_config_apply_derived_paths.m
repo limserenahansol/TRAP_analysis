@@ -19,4 +19,6 @@ function C = trap_config_apply_derived_paths(C)
     C.step06_regionwise_root = fullfile(oroot, '06_regionwise_Active_vs_Passive');
     C.step12_per_group_topN_root = fullfile(oroot, '12_per_group_phase_topN');
     C.step13_cluster_viz_root = fullfile(oroot, '13_universal_cluster_PCA_density');
+    C.step13_k_grid_root = fullfile(oroot, '13_universal_cluster_PCA_k_grid');
+    C.step13_k_recommendation_root = fullfile(oroot, '13_step13_k_recommendation');
 end

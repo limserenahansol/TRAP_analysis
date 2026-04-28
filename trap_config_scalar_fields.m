@@ -10,7 +10,8 @@ function C = trap_config_scalar_fields()
     C.useManifest   = true;
     C.cohort_require_identical_atlas = false;
 
-    C.trap_output_density_variant = '';
+    % '' = generic TRAP_OUTPUT; 'calculated_mm3' | 'allen_mm3' = dual-density trees (see trap_resolve_density_output_variant)
+    C.trap_output_density_variant = 'calculated_mm3';
     C.outRoot_allen = fullfile(root, 'TRAP_OUTPUT_allen_mm3');
     C.outRoot_calculated = fullfile(root, 'TRAP_OUTPUT_calculated_mm3');
     % Suffix appended to manifest column base (text before '(') for dual runs; override if Excel headers differ
@@ -81,6 +82,25 @@ function C = trap_config_scalar_fields()
     C.step13_k_eval_max_k = 10;
     C.step13_tsne_perplexity = [];
     C.step13_representative_topN = 10;
+    % representative_regions: 'silhouette' | 'pc1' | 'pc1_abs' (used when step13_representative_rank_modes has one mode)
+    C.step13_representative_rank_by = 'silhouette';
+    % Default {silhouette} matches legacy Step 13 (one bar chart + CSV). Add 'pc1' for second set of files.
+    C.step13_representative_rank_modes = {'silhouette'};
+    % trap_run_step13_universal_cluster_fixed_k: k-means K and sprintf folder under outRoot (Windows-safe name)
+    C.step13_fixed_k = [];
+    C.step13_fixed_k_output_fmt = '13_universal_cluster_PCA_k=%d';
+    % trap_run_step13_universal_cluster_k_grid: which K values to render (full Step 13 tree under step13_k_grid_root)
+    C.step13_k_grid_ks = 2:10;
+
+    % trap_cluster_PCA_map: if >=1, also write 02_cluster_region_roster_topN_* (top N per cluster by PC1 then PC2)
+    C.step13_pca_roster_topn_per_cluster = 0;
+
+    % trap_cluster_density_by_phase: if true, only regions with mean(Active)>mean(Passive) at every phase
+    C.step13_density_AP_up_all_phases_only = false;
+
+    % trap_run_cluster_ambiguity_analysis: flag bottom quantile of centroid-distance margins; max k for stability heatmap
+    C.cluster_ambiguity_quantile = 0.25;
+    C.cluster_ambiguity_k_max = 8;
 
     C.runMode = 'full';
     if strcmpi(C.runMode, 'quick')

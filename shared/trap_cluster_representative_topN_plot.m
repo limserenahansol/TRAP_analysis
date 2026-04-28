@@ -1,7 +1,15 @@
-function trap_cluster_representative_topN_plot(densRaw, GroupPhase, clusterIds, NodeSel, outDir, C, phasesUsed, topN)
-%TRAP_CLUSTER_REPRESENTATIVE_TOPN_PLOT  Horizontal bars: top-N regions per cluster by silhouette (universal pool z-space).
-%   Matches Step 3 v2 logic for representative picks: silhouette on z-scored pooled-phase samples.
-%   Writes representative_regions/05_topN_representatives_by_cluster.png (+ .txt, .csv).
+function trap_cluster_representative_topN_plot(densRaw, GroupPhase, clusterIds, NodeSel, outDir, C, phasesUsed, topN, densWorkDisplay)
+%TRAP_CLUSTER_REPRESENTATIVE_TOPN_PLOT  Top-N regions per cluster (silhouette or PC1 rank).
+%
+%   Ranking (trap_config.step13_representative_rank_by):
+%     'silhouette' (default) — silhouette on universal pooled-z matrix (same as Step 3 k-means space).
+%     'pc1' — largest PC1 score (matches trap_cluster_PCA_map on densWorkDisplay for this folder).
+%     'pc1_abs' — largest |PC1|.
+%
+%   densWorkDisplay: same matrix as Step 13 scale (raw_cells_mm3 or z_within_phase). Pass [] for
+%   silhouette-only / backward compatibility.
+%
+%   Writes representative_regions/05_topN_representatives_by_cluster*.png (+ .csv).
 
     trap_ensure_dir(outDir);
 
@@ -12,7 +20,29 @@ function trap_cluster_representative_topN_plot(densRaw, GroupPhase, clusterIds, 
             topN = 10;
         end
     end
+    if nargin < 9
+        densWorkDisplay = [];
+    end
 
+    rankBy = 'silhouette';
+    if isfield(C, 'step13_representative_rank_by') && ~isempty(C.step13_representative_rank_by)
+        rankBy = lower(strtrim(char(string(C.step13_representative_rank_by))));
+    end
+
+    usePc1 = ismember(rankBy, {'pc1', 'pc1_abs', 'pc1_display', 'pc1_largest'});
+    if usePc1 && isempty(densWorkDisplay)
+        warning('TRAP:repTopN:noDensWork', ...
+            'step13_representative_rank_by=%s requires densWork (scale matrix). Using silhouette.', rankBy);
+        rankBy = 'silhouette';
+        usePc1 = false;
+    end
+
+    if usePc1
+        local_run_pc1_rank(clusterIds, NodeSel, densWorkDisplay, outDir, topN, rankBy);
+        return;
+    end
+
+    %% --- Silhouette path (universal pool z, Step 3–matched features)
     phasesUsed = string(phasesUsed(:));
     if isempty(phasesUsed)
         trap_export_placeholder_figure(fullfile(outDir, '05_topN_representatives_by_cluster.png'), ...
@@ -60,6 +90,55 @@ function trap_cluster_representative_topN_plot(densRaw, GroupPhase, clusterIds, 
     end
     sil = sil(:);
 
+    scoreColname = 'silhouette';
+    barLabel = 'Silhouette (universal pool z-space)';
+    titleRank = 'silhouette';
+    pngBase = '05_topN_representatives_by_cluster';
+    readmeIntro = sprintf([ ...
+        'Per cluster: ranked by SILHOUETTE on universal pooled-z (same construction as Step 3 k-means).\n' ...
+        'Phases pooled: {%s}.\n'], strjoin(phasesUsed, ', '));
+
+    local_plot_bars_and_csv(nd, lab, sil, topN, outDir, pngBase, barLabel, titleRank, scoreColname, readmeIntro, ...
+        'topN_representatives_per_cluster.csv');
+end
+
+function local_run_pc1_rank(clusterIds, NodeSel, densWork, outDir, topN, rankBy)
+    validMask = ~isnan(clusterIds) & isfinite(clusterIds);
+    Xr = densWork(validMask, :);
+    finCols = all(isfinite(Xr), 1);
+    Xr = Xr(:, finCols);
+    nd = NodeSel(validMask, :);
+    lab = clusterIds(validMask);
+
+    if size(Xr, 1) < 3 || size(Xr, 2) < 2 || numel(unique(lab)) < 2
+        trap_export_placeholder_figure(fullfile(outDir, '05_topN_representatives_by_cluster_PC1rank.png'), ...
+            'Top-N by PC1', 'Too few regions/samples for PCA.');
+        return;
+    end
+
+    warnPCA = warning('off', 'all');
+    [~, score, ~, ~, ~] = pca(Xr);
+    warning(warnPCA);
+    pc1 = score(:, 1);
+    if strcmp(rankBy, 'pc1_abs')
+        rankScore = abs(pc1);
+    else
+        rankScore = pc1;
+    end
+
+    scoreColname = 'PC1';
+    barLabel = 'PC1 (same basis as 01_cluster_map_PC1_PC2 in this folder)';
+    titleRank = 'PC1';
+    pngBase = '05_topN_representatives_by_cluster_PC1rank';
+    readmeIntro = sprintf([ ...
+        'Per cluster: ranked by %s on the SAME matrix as trap_cluster_PCA_map for this scale folder\n' ...
+        '(regions x samples after finite columns only).\n'], rankBy);
+
+    local_plot_bars_and_csv(nd, lab, rankScore, topN, outDir, pngBase, barLabel, titleRank, scoreColname, readmeIntro, ...
+        'topN_representatives_per_cluster_PC1rank.csv');
+end
+
+function local_plot_bars_and_csv(nd, lab, rankScore, topN, outDir, pngBase, barLabel, titleRank, scoreColname, readmeIntro, csvFileName)
     uCl = sort(unique(lab));
     K = numel(uCl);
     cmap = [0.82 0.18 0.12; 0.12 0.38 0.78; 0.18 0.72 0.32; 0.92 0.58 0.08;
@@ -69,7 +148,6 @@ function trap_cluster_representative_topN_plot(densRaw, GroupPhase, clusterIds, 
     end
 
     rowList = cell(0, 5);
-
     figW = min(1400, 420 + 180 * K);
     figure('Color', 'w', 'Position', [40 40 figW min(920, 140 + 220 * K)]);
     tiledlayout(K, 1, 'Padding', 'compact', 'TileSpacing', 'compact');
@@ -77,12 +155,13 @@ function trap_cluster_representative_topN_plot(densRaw, GroupPhase, clusterIds, 
     for ki = 1:K
         cid = uCl(ki);
         idxC = find(lab == cid);
-        [~, ord] = sort(sil(idxC), 'descend');
+        rs = rankScore(idxC);
+        [sorted, ord] = sort(rs(:), 'descend');
         nPick = min(topN, numel(ord));
-        pick = idxC(ord(1:nPick));
-        scores = sil(pick);
-        acr = cellstr(string(nd.acronym(pick)));
-        ids = double(nd.id(pick));
+        pickLocal = idxC(ord(1:nPick));
+        scores = sorted(1:nPick);
+        acr = cellstr(string(nd.acronym(pickLocal)));
+        ids = double(nd.id(pickLocal));
 
         for r = 1:nPick
             rowList(end + 1, :) = {double(cid), r, acr{r}, ids(r), scores(r)}; %#ok<AGROW>
@@ -94,35 +173,32 @@ function trap_cluster_representative_topN_plot(densRaw, GroupPhase, clusterIds, 
             'EdgeColor', [0.25 0.25 0.25], 'LineWidth', 0.5);
         set(gca, 'YDir', 'reverse', 'YTick', yy, 'YTickLabel', acr, ...
             'TickLabelInterpreter', 'none', 'FontSize', 9);
-        xlabel('Silhouette (universal pool z-space)');
-        title(sprintf('Cluster %d — top %d by silhouette (n=%d in cluster)', cid, nPick, numel(idxC)), ...
+        xlabel(barLabel, 'Interpreter', 'none');
+        title(sprintf('Cluster %d — top %d by %s (n=%d in cluster)', cid, nPick, titleRank, numel(idxC)), ...
             'Interpreter', 'none', 'FontSize', 10);
         grid on;
-        xlim([min(-0.2, min(scores) - 0.05), max(0.8, max(scores) + 0.05)]);
+        smin = min(scores);
+        smax = max(scores);
+        pad = max(0.02 * (smax - smin), 0.01);
+        xlim([smin - pad, smax + pad]);
     end
 
-    sgtitle(sprintf('Most representative regions per cluster (top %d, universal pooled z-score features)', topN), ...
+    sgtitle(sprintf('Top %d regions per cluster by %s', topN, titleRank), ...
         'FontSize', 11, 'Interpreter', 'none');
 
-    readmeTxt = sprintf([ ...
-        'Per cluster: regions ranked by silhouette using the SAME matrix as Step 3 universal k-means:\n' ...
-        'z-score each region across samples pooled over phases {%s}.\n' ...
-        'Higher silhouette = region sits tighter with its cluster vs others.\n' ...
-        'If Statistics Toolbox silhouette is unavailable, scores are negative squared distance to cluster centroid.\n'], ...
-        strjoin(phasesUsed, ', '));
-
-    trap_export_figure(gcf, fullfile(outDir, '05_topN_representatives_by_cluster.png'), readmeTxt);
+    readmeTxt = [readmeIntro sprintf('Higher bar = higher %s within that cluster.', titleRank)];
+    pngPath = fullfile(outDir, [pngBase '.png']);
+    trap_export_figure(gcf, pngPath, readmeTxt);
     close(gcf);
 
     if ~isempty(rowList)
         T = cell2table(rowList, 'VariableNames', ...
-            {'cluster', 'rank_in_cluster', 'acronym', 'id', 'score'});
-        writetable(T, fullfile(outDir, 'topN_representatives_per_cluster.csv'));
+            {'cluster', 'rank_in_cluster', 'acronym', 'id', scoreColname});
+        writetable(T, fullfile(outDir, csvFileName));
     end
 end
 
 function s = local_centroid_score(Xz, lab)
-    % Higher = closer to cluster centroid (fallback when silhouette unavailable).
     n = size(Xz, 1);
     s = nan(n, 1);
     u = unique(lab);

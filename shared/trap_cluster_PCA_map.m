@@ -4,6 +4,9 @@ function trap_cluster_PCA_map(densWork, NodeSel, clusterIds, outDir, scaleLab, C
 %   NodeSel: region table aligned with rows of densWork.
 %   clusterIds: vector length nRegions, universal cluster ID per region (NaN = unassigned).
 %   Saves 01_cluster_map_PC1_PC2.png and 02_cluster_region_roster.csv to outDir.
+%   Optional: trap_config.step13_pca_roster_topn_per_cluster = N (N>=1) also writes
+%   02_cluster_region_roster_topN_PC1_then_PC2_per_cluster.csv — top N rows per cluster
+%   by descending PC1, tie-break descending PC2 (same PCA as the map).
 
     trap_ensure_dir(outDir);
 
@@ -101,7 +104,47 @@ function trap_cluster_PCA_map(densWork, NodeSel, clusterIds, outDir, scaleLab, C
     Troster = table(nd.id, region, acr, cl, PC1, PC2, ...
         'VariableNames', {'id', 'region', 'acronym', 'cluster', 'PC1', 'PC2'});
     Troster = sortrows(Troster, 'cluster');
-    writetable(Troster, fullfile(outDir, '02_cluster_region_roster.csv'));
+    local_safe_writetable(Troster, fullfile(outDir, '02_cluster_region_roster.csv'));
+
+    nTopRoster = 0;
+    if isfield(C, 'step13_pca_roster_topn_per_cluster') && ~isempty(C.step13_pca_roster_topn_per_cluster)
+        nTopRoster = max(0, round(double(C.step13_pca_roster_topn_per_cluster)));
+    end
+    if nTopRoster >= 1
+        pickRows = table();
+        for kii = 1:K
+            cid = uCl(kii);
+            sub = Troster(Troster.cluster == cid, :);
+            if height(sub) < 1
+                continue;
+            end
+            sub = sortrows(sub, {'PC1', 'PC2'}, {'descend', 'descend'});
+            nk = min(nTopRoster, height(sub));
+            pickRows = [pickRows; sub(1:nk, :)]; %#ok<AGROW>
+        end
+        if height(pickRows) > 0
+            outR = fullfile(outDir, sprintf('02_cluster_region_roster_top%d_PC1_then_PC2_per_cluster.csv', nTopRoster));
+            local_safe_writetable(pickRows, outR);
+        end
+    end
+end
+
+function local_safe_writetable(T, fpath)
+    try
+        writetable(T, fpath);
+    catch ME
+        msg = lower(char(ME.message));
+        if contains(msg, 'permission') || contains(msg, 'denied') || contains(msg, 'cannot open')
+            [d, base, ext] = fileparts(fpath);
+            if isempty(ext), ext = '.csv'; end
+            alt = fullfile(d, sprintf('%s_%s%s', base, datestr(now, 'yyyymmdd_HHMMSS'), ext));
+            warning('TRAP:clusterRoster:locked', ...
+                ['Could not overwrite %s (close Excel / unlock file). Writing backup:\n  %s'], fpath, alt);
+            writetable(T, alt);
+        else
+            rethrow(ME);
+        end
+    end
 end
 
 function local_draw_ellipse(x, y, col)
