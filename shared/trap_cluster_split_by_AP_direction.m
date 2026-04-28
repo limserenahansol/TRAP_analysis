@@ -103,8 +103,11 @@ function trap_cluster_split_by_AP_direction(densWork, GroupDelivery, GroupPhase,
         alwaysAP = all(isfinite(delta) & delta > 0, 2);
         if any(alwaysAP)
             Ta = Tcsv(alwaysAP, {'id', 'region', 'acronym'});
-            writetable(Ta, fullfile(clDir, sprintf('Cluster%d_always_Active_gt_Passive_all_phases.csv', cid)));
+        else
+            Ta = table('Size', [0, 3], 'VariableTypes', {'double', 'string', 'string'}, ...
+                'VariableNames', {'id', 'region', 'acronym'});
         end
+        writetable(Ta, fullfile(clDir, sprintf('Cluster%d_always_Active_gt_Passive_all_phases.csv', cid)));
 
         local_plot_direction_heatmap(delta, region, phases, cid, nReg, clDir, scaleLab, C);
 
