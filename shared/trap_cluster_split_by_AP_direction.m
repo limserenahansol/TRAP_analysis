@@ -6,6 +6,8 @@ function trap_cluster_split_by_AP_direction(densWork, GroupDelivery, GroupPhase,
 %     - Plots horizontal bar chart of the difference (red = A>P, blue = A<P).
 %     - Saves a CSV per cluster with region x phase direction matrix.
 %     - Saves a heatmap showing direction across phases for all regions in that cluster.
+%       Heatmap row order: TOP = regions with Active>Passive in every phase; bottom = others.
+%       Within each block, rows sorted by mean(delta) so strongest "always-A>P" at top.
 
     trap_ensure_dir(outDir);
 
@@ -67,6 +69,14 @@ function trap_cluster_split_by_AP_direction(densWork, GroupDelivery, GroupPhase,
         region = trap_region_base_name(NodeSel.acronym(regIdx));
         ids = double(NodeSel.id(regIdx));
 
+        sortIdx = local_AP_split_row_sort(delta);
+        delta = delta(sortIdx, :);
+        meanA = meanA(sortIdx, :);
+        meanP = meanP(sortIdx, :);
+        acr = acr(sortIdx);
+        region = region(sortIdx);
+        ids = ids(sortIdx);
+
         dirLabels = cell(nReg, nP);
         for ip = 1:nP
             for ir = 1:nReg
@@ -90,6 +100,12 @@ function trap_cluster_split_by_AP_direction(densWork, GroupDelivery, GroupPhase,
         end
         writetable(Tcsv, fullfile(clDir, sprintf('Cluster%d_region_AP_direction.csv', cid)));
 
+        alwaysAP = all(isfinite(delta) & delta > 0, 2);
+        if any(alwaysAP)
+            Ta = Tcsv(alwaysAP, {'id', 'region', 'acronym'});
+            writetable(Ta, fullfile(clDir, sprintf('Cluster%d_always_Active_gt_Passive_all_phases.csv', cid)));
+        end
+
         local_plot_direction_heatmap(delta, region, phases, cid, nReg, clDir, scaleLab, C);
 
         for ip = 1:nP
@@ -101,12 +117,24 @@ function trap_cluster_split_by_AP_direction(densWork, GroupDelivery, GroupPhase,
     end
 end
 
+function sortIdx = local_AP_split_row_sort(delta)
+% Rows with finite delta>0 in every phase first at plot TOP (last row index); within blocks sort by mean delta.
+    nReg = size(delta, 1);
+    mu = mean(delta, 2, 'omitnan');
+    allPos = false(nReg, 1);
+    for ir = 1:nReg
+        row = delta(ir, :);
+        allPos(ir) = all(isfinite(row) & row > 0);
+    end
+    idxMix = find(~allPos);
+    idxAll = find(allPos);
+    [~, oMix] = sort(mu(idxMix), 'ascend');
+    [~, oAll] = sort(mu(idxAll), 'ascend');
+    sortIdx = [idxMix(oMix); idxAll(oAll)];
+end
+
 function local_plot_direction_heatmap(delta, regionNames, phases, cid, nReg, clDir, scaleLab, C)
     nP = numel(phases);
-
-    [~, sortIdx] = sort(mean(delta, 2, 'omitnan'), 'descend');
-    delta = delta(sortIdx, :);
-    regionNames = regionNames(sortIdx);
 
     figH = max(480, min(1400, 18 * nReg + 140));
     figure('Color', 'w', 'Position', [60 60 max(560, 100 * nP + 200) figH]);
@@ -133,7 +161,9 @@ function local_plot_direction_heatmap(delta, regionNames, phases, cid, nReg, clD
     pngPath = fullfile(clDir, sprintf('Cluster%d_direction_heatmap.png', cid));
     readmeTxt = sprintf(['Cluster %d: heatmap of mean(Active) - mean(Passive) per region per phase.\n' ...
         'Red = Active > Passive, Blue = Active < Passive.\n' ...
-        'Regions sorted by mean delta across phases (highest at top).\nScale: %s.'], cid, scaleLab);
+        'Rows: bottom = mixed direction / not Active>Passive every phase; TOP = Active>Passive in ALL phases.\n' ...
+        'Within each block, sorted by mean delta (ascending: weakest toward bottom of block, strongest at top).\n' ...
+        'Scale: %s.'], cid, scaleLab);
     trap_export_figure(gcf, pngPath, readmeTxt);
     close(gcf);
 end
