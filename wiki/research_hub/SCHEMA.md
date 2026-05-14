@@ -9,6 +9,8 @@
 
 ## Ingest (when something new lands)
 
+0. **Proactive rule:** substantive code/config/analysis changes made in chat should also touch this hub (at least `log.md` + one sentence on the right page) even if the user did not say “wiki” — unless they said **no wiki** / **위키 빼고**, or the change is trivial (typos/format/comments only).
+
 1. Identify **which code repo** owns the fact (PR, commit, path).
 2. Add or update **one** canonical paragraph here + link to GitHub file or README section.
 3. If multiple repos are affected, update [cross/opioid_TRAP_genelist.md](cross/opioid_TRAP_genelist.md) or the relevant per-repo page — not three copies of the same paragraph.
