@@ -6,6 +6,8 @@ Analysis pipeline for **TRAP whole-brain imaging**: density (cells/mm³) per All
 
 **Publication schematics (Steps 1–3, PNG):** [`docs/steps_1_2_3_publication_schematics/`](docs/steps_1_2_3_publication_schematics/) — raster figures plus [`PHASE_LABELS_AND_Z.txt`](docs/steps_1_2_3_publication_schematics/PHASE_LABELS_AND_Z.txt) (canonical phase labels at load vs optional within-phase z-scoring).
 
+**Cross-repo & LLM wiki:** [`wiki/README.md`](wiki/README.md) · [central research wiki](https://github.com/limserenahansol/research-wiki/blob/main/index.md)
+
 ---
 
 ## Roadmap (schematic)
