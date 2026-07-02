@@ -1,0 +1,29 @@
+{
+  "n_mice":20,
+  "n_regions_forebrain":138,
+  "density_variant":"calculated_mm3",
+  "scale":"z_within_phase",
+  "k_fixed_step3":4,
+  "sample_labels":[
+    "Active_During_HaLi_020326_04",
+    "Active_During_HaLi_020326_07",
+    "Active_During_HaLi_020326_10",
+    "Passive_During_HaLi_020326_05",
+    "Passive_During_HaLi_020326_06",
+    "Active_Post_HaLi_020326_12",
+    "Active_Post_HaLi_102125_08",
+    "Passive_Post_HaLi_020326_01",
+    "Passive_Post_HaLi_102125_03",
+    "Active_Reinstatement_HaLi_020326_09",
+    "Active_Reinstatement_HaLi_102125_04",
+    "Active_Reinstatement_HaLi_102125_07",
+    "Passive_Reinstatement_HaLi_020326_08",
+    "Passive_Reinstatement_HaLi_102125_05",
+    "Passive_Reinstatement_HaLi_102125_06",
+    "Active_Withdrawal_HaLi_020326_03",
+    "Active_Withdrawal_HaLi_102125_02",
+    "Passive_Withdrawal_HaLi_020326_02",
+    "Passive_Withdrawal_HaLi_020326_13",
+    "Passive_Withdrawal_HaLi_102125_01"
+  ]
+}

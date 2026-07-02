@@ -1,13 +1,13 @@
 cohort_id,column_name,delivery,phase,include,mouse_id
 1,HaLi_102125_01_7597_black density (cells/mm^3),Passive,Withdrawal,1,HaLi_102125_01
 1,HaLi_102125_02_7597_orange density (cells/mm^3),Active,Withdrawal,1,HaLi_102125_02
-1,HaLi_102125_03_8768_one density (cells/mm^3),Passive,Post,1,HaLi_102125_03
+1,HaLi_102125_03_8768_one density (cells/mm^3),Passive,post,1,HaLi_102125_03
 1,HaLi_102125_04_8606_white density (cells/mm^3),Active,Reinstatement,1,HaLi_102125_04
 1,HaLi_102125_05_8605_white density (cells/mm^3),Passive,Reinstatement,1,HaLi_102125_05
 1,HaLi_102125_06_8606_black density (cells/mm^3),Passive,Reinstatement,1,HaLi_102125_06
 1,HaLi_102125_07_8606_red density (cells/mm^3),Active,Reinstatement,1,HaLi_102125_07
-1,HaLi_102125_08_8605_black density (cells/mm^3),Active,Post,1,HaLi_102125_08
-2,HaLi_020326_01_6100red_f_s density (cells/mm^3),Passive,Post,1,HaLi_020326_01
+1,HaLi_102125_08_8605_black density (cells/mm^3),Active,post,1,HaLi_102125_08
+2,HaLi_020326_01_6100red_f_s density (cells/mm^3),Passive,post,1,HaLi_020326_01
 2,HaLi_020326_02_6100orange_f_p density (cells/mm^3),Passive,Withdrawal,1,HaLi_020326_02
 2,HaLi_020326_03_6100black_f_a density (cells/mm^3),Active,Withdrawal,1,HaLi_020326_03
 2,HaLi_020326_04_0911red_f_a density (cells/mm^3),Active,During,1,HaLi_020326_04
@@ -17,6 +17,6 @@ cohort_id,column_name,delivery,phase,include,mouse_id
 2,HaLi_020326_08_0910red_m_p density (cells/mm^3),Passive,Reinstatement,1,HaLi_020326_08
 2,HaLi_020326_09_0910orange_m_p density (cells/mm^3),Active,Reinstatement,1,HaLi_020326_09
 2,HaLi_020326_10_0910black_m_a density (cells/mm^3),Active,During,1,HaLi_020326_10
-2,HaLi_020326_11_6099red_m_p density (cells/mm^3),Passive,Post,0,HaLi_020326_11
-2,HaLi_020326_12_6099orange_m_a density (cells/mm^3),Active,Post,1,HaLi_020326_12
+2,HaLi_020326_11_6099red_m_p density (cells/mm^3),Passive,post,0,HaLi_020326_11
+2,HaLi_020326_12_6099orange_m_a density (cells/mm^3),Active,post,1,HaLi_020326_12
 2,HaLi_020326_13_6099black_m_a density (cells/mm^3),Passive,Withdrawal,1,HaLi_020326_13

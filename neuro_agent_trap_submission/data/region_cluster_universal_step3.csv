@@ -1,0 +1,287 @@
+Acronym,FullName,ParentDepth4,Cluster,Depth,ID
+"MOp","left Primary motor area",CTXpl,1,7,18
+"MOs","left Secondary motor area",CTXpl,1,7,24
+"SSp","left Primary somatosensory area",CTXpl,1,7,37
+"SSs","left Supplemental somatosensory area",CTXpl,1,7,100
+"AUDd","left Dorsal auditory area",CTXpl,1,7,122
+"AUDp","left Primary auditory area",CTXpl,1,7,136
+"AUDpo","left Posterior auditory area",CTXpl,1,7,143
+"AUDv","left Ventral auditory area",CTXpl,1,7,150
+"VISal","left Anterolateral visual area",CTXpl,1,7,164
+"VISam","left Anteromedial visual area",CTXpl,1,7,171
+"VISl","left Lateral visual area",CTXpl,1,7,178
+"VISp","left Primary visual area",CTXpl,1,7,185
+"VISpl","left Posterolateral visual area",CTXpl,1,7,192
+"VISpm","left posteromedial visual area",CTXpl,1,7,199
+"VISli","left Laterointermediate area",CTXpl,1,7,206
+"VISpor","left Postrhinal area",CTXpl,1,7,213
+"ACAd","left Anterior cingulate area, dorsal part",CTXpl,1,7,226
+"ACAv","left Anterior cingulate area, ventral part",CTXpl,1,7,232
+"ORBl","left Orbital area, lateral part",CTXpl,1,7,258
+"ORBm","left Orbital area, medial part",CTXpl,1,7,264
+"ORBvl","left Orbital area, ventrolateral part",CTXpl,1,7,272
+"AId","left Agranular insular area, dorsal part",CTXpl,1,7,279
+"AIp","left Agranular insular area, posterior part",CTXpl,4,7,285
+"AIv","left Agranular insular area, ventral part",CTXpl,1,7,291
+"RSPagl","left Retrosplenial area, lateral agranular part",CTXpl,1,7,298
+"RSPd","left Retrosplenial area, dorsal part",CTXpl,1,7,325
+"RSPv","left Retrosplenial area, ventral part",CTXpl,1,7,332
+"VISa","left Anterior area",CTXpl,1,7,346
+"VISrl","left Rostrolateral visual area",CTXpl,1,7,353
+"TTd","left Taenia tecta, dorsal part",CTXpl,1,7,399
+"TTv","left Taenia tecta, ventral part",CTXpl,4,7,405
+"COAa","left Cortical amygdalar area, anterior part",CTXpl,3,7,427
+"COAp","left Cortical amygdalar area, posterior part",CTXpl,1,7,431
+"CA","left Ammon's horn",CTXpl,1,7,456
+"DG","left Dentate gyrus",CTXpl,1,7,473
+"FC","left Fasciola cinerea",CTXpl,3,7,490
+"IG","left Induseum griseum",CTXpl,2,7,491
+"ENT","left Entorhinal area",CTXpl,1,7,493
+"PAR","left Parasubiculum",CTXpl,1,7,523
+"POST","left Postsubiculum",CTXpl,1,7,527
+"PRE","left Presubiculum",CTXpl,1,7,531
+"SUB","left Subiculum",CTXpl,1,7,535
+"ProS","left Prosubiculum",CTXpl,1,7,544
+"HATA","left Hippocampo-amygdalar transition area",CTXpl,1,7,553
+"APr","left Area prostriata",CTXpl,1,7,554
+"CLA","left Claustrum",CTXsp,1,5,557
+"EPd","left Endopiriform nucleus, dorsal part",CTXsp,1,6,559
+"EPv","left Endopiriform nucleus, ventral part",CTXsp,1,6,560
+"LA","left Lateral amygdalar nucleus",CTXsp,1,5,561
+"BLAa","left Basolateral amygdalar nucleus, anterior part",CTXsp,1,6,563
+"BLAp","left Basolateral amygdalar nucleus, posterior part",CTXsp,4,6,564
+"BLAv","left Basolateral amygdalar nucleus, ventral part",CTXsp,4,6,565
+"BMAa","left Basomedial amygdalar nucleus, anterior part",CTXsp,1,6,567
+"BMAp","left Basomedial amygdalar nucleus, posterior part",CTXsp,4,6,568
+"PA","left Posterior amygdalar nucleus",CTXsp,1,5,569
+"CP","left Caudoputamen",STR,4,6,573
+"ACB","left Nucleus accumbens",STR,4,6,575
+"FS","left Fundus of striatum",STR,1,6,576
+"OT","left Olfactory tubercle",STR,4,6,577
+"LSc","left Lateral septal nucleus, caudal (caudodorsal) part",STR,1,7,587
+"LSr","left Lateral septal nucleus, rostral (rostroventral) part",STR,1,7,588
+"LSv","left Lateral septal nucleus, ventral part",STR,1,7,589
+"CEAc","left Central amygdalar nucleus, capsular part",STR,1,7,596
+"CEAl","left Central amygdalar nucleus, lateral part",STR,1,7,597
+"CEAm","left Central amygdalar nucleus, medial part",STR,1,7,598
+"GPe","left Globus pallidus, external segment",PAL,1,6,610
+"GPi","left Globus pallidus, internal segment",PAL,1,6,611
+"SI","left Substantia innominata",PAL,4,6,613
+"MA","left Magnocellular nucleus",PAL,4,6,614
+"MS","left Medial septal nucleus",PAL,4,7,617
+"NDB","left Diagonal band nucleus",PAL,4,7,618
+"BST","left Bed nuclei of the stria terminalis",PAL,1,6,621
+"BAC","left Bed nucleus of the anterior commissure",PAL,3,6,638
+"VAL","left Ventral anterior-lateral complex of the thalamus",TH,1,7,644
+"VM","left Ventral medial nucleus of the thalamus",TH,4,7,645
+"VP","left Ventral posterior complex of the thalamus",TH,4,7,646
+"PoT","left Posterior triangular thalamic nucleus",TH,1,7,651
+"SPFm","left Subparafascicular nucleus, magnocellular part",TH,3,7,653
+"SPFp","left Subparafascicular nucleus, parvicellular part",TH,3,7,654
+"MG","left Medial geniculate complex",TH,1,7,658
+"LGd","left Dorsal part of the lateral geniculate complex",TH,1,7,662
+"LP","left Lateral posterior nucleus of the thalamus",TH,1,7,668
+"PO","left Posterior complex of the thalamus",TH,4,7,669
+"POL","left Posterior limiting nucleus of the thalamus",TH,1,7,670
+"SGN","left Suprageniculate nucleus",TH,1,7,671
+"Eth","left Ethmoid nucleus of the thalamus",TH,2,7,672
+"AV","left Anteroventral nucleus of thalamus",TH,1,7,675
+"AM","left Anteromedial nucleus",TH,1,7,676
+"AD","left Anterodorsal nucleus",TH,1,7,679
+"IAM","left Interanteromedial nucleus of the thalamus",TH,1,7,680
+"IAD","left Interanterodorsal nucleus of the thalamus",TH,1,7,681
+"LD","left Lateral dorsal nucleus of thalamus",TH,4,7,682
+"IMD","left Intermediodorsal nucleus of the thalamus",TH,1,7,684
+"MD","left Mediodorsal nucleus of thalamus",TH,1,7,685
+"SMT","left Submedial nucleus of the thalamus",TH,1,7,689
+"PR","left Perireunensis nucleus",TH,4,7,690
+"PVT","left Paraventricular nucleus of the thalamus",TH,3,7,692
+"PT","left Parataenial nucleus",TH,1,7,693
+"RE","left Nucleus of reuniens",TH,4,7,694
+"Xi","left Xiphoid thalamic nucleus",TH,3,7,695
+"RH","left Rhomboid nucleus",TH,3,7,697
+"CM","left Central medial nucleus of the thalamus",TH,1,7,698
+"PCN","left Paracentral nucleus",TH,3,7,699
+"CL","left Central lateral nucleus of the thalamus",TH,3,7,700
+"PF","left Parafascicular nucleus",TH,1,7,701
+"PIL","left Posterior intralaminar thalamic nucleus",TH,2,7,702
+"IGL","left Intergeniculate leaflet of the lateral geniculate complex",TH,1,7,705
+"IntG","left Intermediate geniculate nucleus",TH,1,7,706
+"LGv","left Ventral part of the lateral geniculate complex",TH,3,7,707
+"SubG","left Subgeniculate nucleus",TH,2,7,710
+"MH","left Medial habenula",TH,3,7,712
+"LH","left Lateral habenula",TH,1,7,713
+"SO","left Supraoptic nucleus",HY,3,6,717
+"ASO","left Accessory supraoptic group",HY,3,6,718
+"PVH","left Paraventricular hypothalamic nucleus",HY,3,6,720
+"PVa","left Periventricular hypothalamic nucleus, anterior part",HY,3,6,731
+"PVi","left Periventricular hypothalamic nucleus, intermediate part",HY,4,6,732
+"ARH","left Arcuate hypothalamic nucleus",HY,3,6,733
+"ADP","left Anterodorsal preoptic nucleus",HY,1,6,735
+"AVP","left Anteroventral preoptic nucleus",HY,3,6,737
+"AVPV","left Anteroventral periventricular nucleus",HY,3,6,738
+"DMH","left Dorsomedial nucleus of the hypothalamus",HY,3,6,739
+"MEPO","left Median preoptic nucleus",HY,3,6,743
+"MPO","left Medial preoptic area",HY,1,6,744
+"OV","left Vascular organ of the lamina terminalis",HY,3,6,745
+"PD","left Posterodorsal preoptic nucleus",HY,3,6,746
+"PS","left Parastrial nucleus",HY,3,6,747
+"PVp","left Periventricular hypothalamic nucleus, posterior part",HY,4,6,749
+"PVpo","left Periventricular hypothalamic nucleus, preoptic part",HY,3,6,750
+"SBPV","left Subparaventricular zone",HY,3,6,751
+"SCH","left Suprachiasmatic nucleus",HY,3,6,752
+"SFO","left Subfornical organ",HY,1,6,753
+"VMPO","left Ventromedial preoptic nucleus",HY,3,6,754
+"VLPO","left Ventrolateral preoptic nucleus",HY,3,6,755
+"LM","left Lateral mammillary nucleus",HY,4,7,763
+"MM","left Medial mammillary nucleus",HY,4,7,764
+"SUM","left Supramammillary nucleus",HY,3,7,770
+"TM","left Tuberomammillary nucleus",HY,4,7,773
+"FF","left Fields of Forel",HY,3,7,804
+"ME","left Median eminence",HY,2,5,805
+"SCop","left Superior colliculus, optic layer",MBsen,1,6,809
+"SCsg","left Superior colliculus, superficial gray layer",MBsen,1,6,810
+"SCzo","left Superior colliculus, zonal layer",MBsen,1,6,811
+"ICc","left Inferior colliculus, central nucleus",MBsen,2,6,813
+"ICd","left Inferior colliculus, dorsal nucleus",MBsen,1,6,814
+"ICe","left Inferior colliculus, external nucleus",MBsen,2,6,815
+"NB","left Nucleus of the brachium of the inferior colliculus",MBsen,1,5,816
+"SAG","left Nucleus sagulum",MBsen,1,5,817
+"PBG","left Parabigeminal nucleus",MBsen,4,5,818
+"MEV","left Midbrain trigeminal nucleus",MBsen,2,5,819
+"SCO","left Subcommissural organ",MBsen,2,5,820
+"SNr","left Substantia nigra, reticular part",MBmot,4,5,822
+"VTA","left Ventral tegmental area",MBmot,4,5,823
+"PN","left Paranigral nucleus",MBmot,4,5,824
+"RR","left Midbrain reticular nucleus, retrorubral area",MBmot,1,5,825
+"MRN","left Midbrain reticular nucleus",MBmot,2,5,826
+"SCdg","left Superior colliculus, motor related, deep gray layer",MBmot,1,6,831
+"SCdw","left Superior colliculus, motor related, deep white layer",MBmot,2,6,832
+"SCiw","left Superior colliculus, motor related, intermediate white layer",MBmot,1,6,833
+"SCig","left Superior colliculus, motor related, intermediate gray layer",MBmot,1,6,834
+"PRC","left Precommissural nucleus",MBmot,3,6,839
+"INC","left Interstitial nucleus of Cajal",MBmot,2,6,840
+"ND","left Nucleus of Darkschewitsch",MBmot,1,6,841
+"Su3","left Supraoculomotor periaqueductal gray",MBmot,1,6,842
+"APN","left Anterior pretectal nucleus",MBmot,1,6,844
+"MPT","left Medial pretectal area",MBmot,3,6,845
+"NOT","left Nucleus of the optic tract",MBmot,3,6,846
+"NPC","left Nucleus of the posterior commissure",MBmot,3,6,847
+"OP","left Olivary pretectal nucleus",MBmot,1,6,848
+"PPT","left Posterior pretectal nucleus",MBmot,1,6,849
+"RPF","left Retroparafascicular nucleus",MBmot,3,6,850
+"CUN","left Cuneiform nucleus",MBmot,1,5,852
+"RN","left Red nucleus",MBmot,2,5,853
+"III","left Oculomotor nucleus",MBmot,1,5,854
+"MA3","left Medial accesory oculomotor nucleus",MBmot,1,5,855
+"EW","left Edinger-Westphal nucleus",MBmot,1,5,856
+"IV","left Trochlear nucleus",MBmot,1,5,857
+"Pa4","left Paratrochlear nucleus",MBmot,2,5,858
+"VTN","left Ventral tegmental nucleus",MBmot,2,5,859
+"AT","left Anterior tegmental nucleus",MBmot,2,5,860
+"LT","left Lateral terminal nucleus of the accessory optic tract",MBmot,2,5,861
+"DT","left Dorsal terminal nucleus of the accessory optic tract",MBmot,3,5,862
+"MT","left Medial terminal nucleus of the accessory optic tract",MBmot,4,5,863
+"SNc","left Substantia nigra, compact part",MBsta,4,5,866
+"PPN","left Pedunculopontine nucleus",MBsta,2,5,867
+"IPR","left Interpeduncular nucleus, rostral",MBsta,4,7,871
+"IPC","left Interpeduncular nucleus, caudal",MBsta,4,7,872
+"IPA","left Interpeduncular nucleus, apical",MBsta,4,7,873
+"IPL","left Interpeduncular nucleus, lateral",MBsta,4,7,874
+"IPI","left Interpeduncular nucleus, intermediate",MBsta,4,7,875
+"IPDM","left Interpeduncular nucleus, dorsomedial",MBsta,2,7,876
+"IPDL","left Interpeduncular nucleus, dorsolateral",MBsta,4,7,877
+"IPRL","left Interpeduncular nucleus, rostrolateral",MBsta,4,7,878
+"KF","left Koelliker-Fuse subnucleus",P,2,7,891
+"POR","left Superior olivary complex, periolivary region",P,3,7,903
+"SOCm","left Superior olivary complex, medial part",P,2,7,904
+"SOCl","left Superior olivary complex, lateral part",P,3,7,905
+"B","left Barrington's nucleus",P,3,6,907
+"DTN","left Dorsal tegmental nucleus",P,2,6,908
+"PDTg","left Posterodorsal tegmental nucleus",P,2,6,910
+"PCG","left Pontine central gray",P,2,6,911
+"PG","left Pontine gray",P,3,6,912
+"PRNc","left Pontine reticular nucleus, caudal part",P,1,6,913
+"SG","left Supragenual nucleus",P,4,6,915
+"SUT","left Supratrigeminal nucleus",P,2,6,917
+"TRN","left Tegmental reticular nucleus",P,3,6,918
+"V","left Motor nucleus of trigeminal",P,2,6,919
+"P5","left Peritrigeminal zone",P,2,6,920
+"Acs5","left Accessory trigeminal nucleus",P,4,6,921
+"PC5","left Parvicellular motor 5 nucleus",P,3,6,922
+"I5","left Intertrigeminal nucleus",P,2,6,923
+"CS","left Superior central nucleus raphe",P,1,6,925
+"LC","left Locus ceruleus",P,1,6,928
+"LDT","left Laterodorsal tegmental nucleus",P,2,6,929
+"NI","left Nucleus incertus",P,4,6,930
+"PRNr","left Pontine reticular nucleus",P,2,6,931
+"RPO","left Nucleus raphe pontis",P,2,6,932
+"SLC","left Subceruleus nucleus",P,3,6,933
+"SLD","left Sublaterodorsal nucleus",P,3,6,934
+"DCO","left Dorsal cochlear nucleus",MY,3,7,941
+"VCO","left Ventral cochlear nucleus",MY,2,7,942
+"CU","left Cuneate nucleus",MY,2,7,944
+"GR","left Gracile nucleus",MY,2,7,945
+"AMBd","left Nucleus ambiguus, dorsal division",MY,3,7,971
+"AMBv","left Nucleus ambiguus, ventral division",MY,3,7,972
+"LRNm","left Lateral reticular nucleus, magnocellular part",MY,3,7,982
+"LRNp","left Lateral reticular nucleus, parvicellular part",MY,3,7,983
+"MDRNd","left Medullary reticular nucleus, dorsal part",MY,3,7,986
+"MDRNv","left Medullary reticular nucleus, ventral part",MY,3,7,987
+"PGRNd","left Paragigantocellular reticular nucleus, dorsal part",MY,2,7,991
+"PGRNl","left Paragigantocellular reticular nucleus, lateral part",MY,3,7,992
+"NR","left Nucleus of Roller",MY,2,7,995
+"PRP","left Nucleus prepositus",MY,2,7,996
+"LAV","left Lateral vestibular nucleus",MY,2,7,1002
+"MV","left Medial vestibular nucleus",MY,2,7,1003
+"SPIV","left Spinal vestibular nucleus",MY,2,7,1004
+"SUV","left Superior vestibular nucleus",MY,2,7,1005
+"RM","left Nucleus raphe magnus",MY,3,6,1011
+"RPA","left Nucleus raphe pallidus",MY,3,6,1012
+"RO","left Nucleus raphe obscurus",MY,3,6,1013
+"LING","left Lingula (I)",VERM,2,5,1020
+"CENT2","left Lobule II",VERM,4,6,1025
+"CENT3","left Lobule III",VERM,4,6,1029
+"CUL4, 5","left Lobules IV-V",VERM,1,6,1042
+"DEC","left Declive (VI)",VERM,2,5,1046
+"FOTU","left Folium-tuber vermis (VII)",VERM,2,5,1050
+"PYR","left Pyramus (VIII)",VERM,3,5,1054
+"UVU","left Uvula (IX)",VERM,2,5,1058
+"NOD","left Nodulus (X)",VERM,1,5,1062
+"SIM","left Simple lobule",HEM,2,5,1067
+"ANcr1","left Crus 1",HEM,2,6,1072
+"ANcr2","left Crus 2",HEM,1,6,1076
+"PRM","left Paramedian lobule",HEM,2,5,1080
+"COPY","left Copula pyramidis",HEM,3,5,1084
+"PFL","left Paraflocculus",HEM,3,5,1088
+"FL","left Flocculus",HEM,3,5,1092
+"lot","left lateral olfactory tract, body",lotg,4,5,1108
+"lotd","left dorsal limb",lotg,4,5,1109
+"sptV","left spinal tract of the trigeminal nerve",sV,2,5,1129
+"tb","left trapezoid body",cVIIIn,3,5,1137
+"das","left dorsal acoustic stria",cVIIIn,2,5,1139
+"ll","left lateral lemniscus",cVIIIn,4,5,1140
+"cic","left inferior colliculus commissure",cVIIIn,3,5,1141
+"bic","left brachium of the inferior colliculus",cVIIIn,4,5,1142
+"cuf","left cuneate fascicle",cett,1,6,1156
+"ml","left medial lemniscus",cett,3,5,1159
+"dscp","left superior cerebellar peduncle decussation",scp,2,5,1175
+"uf","left uncinate fascicle",scp,2,5,1177
+"sctv","left ventral spinocerebellar tract",scp,4,5,1178
+"sctd","left dorsal spinocerebellar tract",icp,3,5,1181
+"ec","left external capsule",fa,1,5,1193
+"alv","left alveus",fxs,4,5,1245
+"df","left dorsal fornix",fxs,3,5,1246
+"fi","left fimbria",fxs,4,5,1247
+"mct","left medial corticohypothalamic tract",fxs,2,6,1251
+"fx","left columns of the fornix",fxs,4,6,1252
+"dhc","left dorsal hippocampal commissure",fxs,4,6,1254
+"vhc","left ventral hippocampal commissure",fxs,4,6,1255
+"stc","left commissural branch of stria terminalis",st,1,5,1260
+"pm","left principal mammillary tract",mfbsma,4,5,1278
+"mtt","left mammillothalamic tract",mfbsma,4,5,1279
+"mtg","left mammillotegmental tract",mfbsma,1,5,1280
+"mp","left mammillary peduncle",mfbsma,4,5,1281
+"sm","left stria medullaris",mfbse,4,5,1285
+"fr","left fasciculus retroflexus",mfbse,3,5,1286
+"hbc","left habenular commissure",mfbse,3,5,1287

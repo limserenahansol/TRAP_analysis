@@ -1,0 +1,37 @@
+{
+  "n_manifest_rows": 21,
+  "n_included_mice": 20,
+  "n_excluded_mice": 1,
+  "cohort1_mice": [
+    "HaLi_102125_01",
+    "HaLi_102125_02",
+    "HaLi_102125_03",
+    "HaLi_102125_04",
+    "HaLi_102125_05",
+    "HaLi_102125_06",
+    "HaLi_102125_07",
+    "HaLi_102125_08"
+  ],
+  "cohort2_mice": [
+    "HaLi_020326_01",
+    "HaLi_020326_02",
+    "HaLi_020326_03",
+    "HaLi_020326_04",
+    "HaLi_020326_05",
+    "HaLi_020326_06",
+    "HaLi_020326_07",
+    "HaLi_020326_08",
+    "HaLi_020326_09",
+    "HaLi_020326_10",
+    "HaLi_020326_12",
+    "HaLi_020326_13"
+  ],
+  "excluded_mice": [
+    "HaLi_020326_11"
+  ],
+  "density_variant": "calculated_mm3",
+  "density_column_suffix": " (cells/sample volume in mm^3)",
+  "source_workbook": "Hansol Lim 561 cell counts + density.xlsx",
+  "source_manifest": "TRAP_sample_manifest_no.csv (21 rows, 20 included)",
+  "matlab_reference_outputs": "TRAP_OUTPUT_calculated_mm3\\13_universal_cluster_PCA_density\\forebrain_no_bs\\z_within_phase"
+}
