@@ -1,43 +1,28 @@
-# Colleague pack — TRAP whole-brain analysis (AI benchmarking)
+# Colleague pack — TRAP final-PDF figures only
 
-**Audience:** colleague building an **AI analysis benchmark** against Hansol’s TRAP pipeline.  
-**Purpose:** navigate biological aim → workflow → each figure → code → meaning, without digging the full MATLAB repo first.
+**Audience:** colleague building an AI analysis benchmark against Hansol’s TRAP story.  
+**Scope:** only figures that appear in the final deck PDF (not the full Step-13 output dump).
 
 | Item | Location |
 |------|----------|
-| **This pack** | `C:\Users\hsollim\Research_Projects\02_TRAP_wholebrain\colleague_AI_benchmark_pack\` |
-| **Canonical MATLAB code** | https://github.com/limserenahansol/TRAP_analysis |
-| **Local code sync** | `C:\Users\hsollim\behavior_task\TRAP_analysis_sync\` |
-| **Final story PPT (PDF)** | [`ppt_source/11TRAP_data_ORBm_BMAp_COA_for_next_step33.pdf`](ppt_source/11TRAP_data_ORBm_BMAp_COA_for_next_step33.pdf) |
-| **Master guide (read this)** | [`01_BIOLOGICAL_AIM_WORKFLOW_FIGURES_CODE.md`](01_BIOLOGICAL_AIM_WORKFLOW_FIGURES_CODE.md) |
-| **Figure gallery** | [`figures/`](figures/) |
-| **Code copies (offline)** | [`code/`](code/) |
-| **Neuro-Agent task package** | `behavior_task\TRAP_analysis_sync\neuro_agent_trap_submission\` |
+| **This pack** | `Research_Projects/02_TRAP_wholebrain/colleague_AI_benchmark_pack/` |
+| **NEW — full explain PPT/PDF** | [`TRAP_colleague_explain_figure_code.pptx`](TRAP_colleague_explain_figure_code.pptx) · [`TRAP_colleague_explain_figure_code.pdf`](TRAP_colleague_explain_figure_code.pdf) |
+| **Original final story PDF** | [`ppt_source/11TRAP_data_ORBm_BMAp_COA_for_next_step33.pdf`](ppt_source/11TRAP_data_ORBm_BMAp_COA_for_next_step33.pdf) |
+| **How the PDF was built** | [`HOW_FINAL_PDF_WAS_MADE.md`](HOW_FINAL_PDF_WAS_MADE.md) |
+| **Figure ↔ slide ↔ code** | [`FINAL_PDF_FIGURE_MAP.md`](FINAL_PDF_FIGURE_MAP.md) |
+| **Biological aim + workflow** | [`01_BIOLOGICAL_AIM_WORKFLOW_FIGURES_CODE.md`](01_BIOLOGICAL_AIM_WORKFLOW_FIGURES_CODE.md) |
+| **GitHub code** | https://github.com/limserenahansol/TRAP_analysis |
 
-## Read order (10–20 min)
+## Read order
 
-1. **Biological aim** → section 1 of the master guide  
-2. **Funnel workflow** → section 2 (hundreds of regions → clusters → ORBm/BMAp/COAa)  
-3. **Figure ↔ code ↔ meaning** → section 3 (matches PPT Fig 1, 3, 4, 5 + Finding B)  
-4. **How to re-run** → section 4  
-5. **What an AI agent should reproduce** → section 5 (rubric-style)
+1. **Open `TRAP_colleague_explain_figure_code.pdf`** (or `.pptx`) — figure + meaning + code on each slide  
+2. `HOW_FINAL_PDF_WAS_MADE.md` — how the original story deck was assembled  
+3. `FINAL_PDF_FIGURE_MAP.md` — file map for pack figures  
+4. `figures/` + `code/` for offline assets  
 
-## Folder map
+Rebuild the explain deck anytime: `python build_colleague_explain_pptx.py`
 
-```text
-colleague_AI_benchmark_pack/
-  00_START_HERE.md                          ← you are here
-  01_BIOLOGICAL_AIM_WORKFLOW_FIGURES_CODE.md ← full navigation doc
-  02_CODE_INDEX_GITHUB.md                   ← GitHub paths only
-  figures/                                  ← PNGs + CSVs from MATLAB Step 13
-  code/                                     ← key .m files (mirrors GitHub layout)
-  ppt_source/                               ← final PPT PDF
-```
+## What is *not* in this pack
 
-## Density / cohort used for these figures
-
-- **Variant:** `calculated_mm3` (cells / sample volume in mm³)  
-- **Mask:** `forebrain_no_bs` + `z_within_phase`  
-- **Mice:** 20 included (both cohorts); 1 excluded (`HaLi_020326_11`)  
-- **Output root on disk:**  
-  `TRAP_analysis_sync\TRAP_OUTPUT_calculated_mm3\13_universal_cluster_PCA_density\forebrain_no_bs\z_within_phase\`
+- Raw Step-13 universal-cluster PNGs that never entered the final deck  
+- Large histology panels (original PDF slides 14–16 ORBm, 19–21 BMAp, 29–30 COAa) — open the original final PDF for those

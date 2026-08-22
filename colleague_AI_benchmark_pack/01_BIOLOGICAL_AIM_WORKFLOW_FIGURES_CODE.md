@@ -3,6 +3,9 @@
 Hansol Lim — whole-brain TRAP (Active vs Passive morphine SA).  
 Companion PDF: [`ppt_source/11TRAP_data_ORBm_BMAp_COA_for_next_step33.pdf`](ppt_source/11TRAP_data_ORBm_BMAp_COA_for_next_step33.pdf)
 
+**Figures in this pack = only those used in that final PDF.**  
+See [`HOW_FINAL_PDF_WAS_MADE.md`](HOW_FINAL_PDF_WAS_MADE.md) and [`FINAL_PDF_FIGURE_MAP.md`](FINAL_PDF_FIGURE_MAP.md). Do not treat the full Step-13 PNG dump as the final figure set.
+
 ---
 
 ## 1. Main biological aim
@@ -96,101 +99,26 @@ TRAP_OUTPUT_calculated_mm3/13_universal_cluster_PCA_density/forebrain_no_bs/z_wi
 
 ---
 
-## 3. PPT figures ↔ pipeline figures ↔ code ↔ meaning
+## 3. PPT figures ↔ code ↔ meaning (final PDF only)
 
-Convention: **PPT Fig #** matches the PDF page labels; **Pack figure** is the file under `figures/`.
+**Authoritative map:** [`FINAL_PDF_FIGURE_MAP.md`](FINAL_PDF_FIGURE_MAP.md)  
+**How the deck was built:** [`HOW_FINAL_PDF_WAS_MADE.md`](HOW_FINAL_PDF_WAS_MADE.md)
 
----
+Final figures were made with Python presentation helpers on top of Step-13 tables — not by dumping every Step-13 PNG:
 
-### Fig 1 — How clustering was done (PCA map + K choice)
+| Block | Pack folder | Main scripts |
+|-------|-------------|--------------|
+| Fig1 / Fig3 / Fig4 / Fig5 | `figures/01_pipeline_clustering/` | `trap_region_selection_ppt.py` |
+| Finding A ORBm/BMAp | `figures/02_findingA_ORBm_BMAp/` | `trap_region_zoomin.py`, `trap_forMark_figs.py`, paired-slope helpers |
+| Finding B COAa | `figures/03_findingB_COAa/` | `trap_fig_cluster3_heatmap.py`, COAa / P>A helpers |
+| Schematics | `figures/05_schematics/` | forMark schematic builders |
+| Histology | PDF slides 14–16, 19–21, 29–30 only | manual inserts in PPT |
 
-| | |
-|--|--|
-| **PPT meaning** | 138 forebrain regions in PC space, colored by K=4; PCA is display-only; clustering uses full region profile |
-| **Pack figure** | ![PCA](figures/Fig01_PCA_cluster_map.png) |
-| | Also: [`figures/Fig01b_tSNE_cluster_map.png`](figures/Fig01b_tSNE_cluster_map.png), [`figures/k_evaluation/Fig01c_K_sanity_silhouette_elbow.png`](figures/k_evaluation/Fig01c_K_sanity_silhouette_elbow.png) |
-| **MATLAB output** | `01_cluster_map_PC1_PC2.png`, `02_cluster_map_tsne.png`, `k_evaluation/03_k_sanity_silhouette_elbow.png` |
-| **Code** | Cluster labels from Step 03 → viz in Step 13: [`trap_cluster_PCA_map.m`](code/shared/trap_cluster_PCA_map.m), [`trap_cluster_tsne_map.m`](code/shared/trap_cluster_tsne_map.m), [`trap_cluster_k_sanity_universal.m`](code/shared/trap_cluster_k_sanity_universal.m) |
-| **GitHub** | [`shared/trap_cluster_PCA_map.m`](https://github.com/limserenahansol/TRAP_analysis/blob/main/shared/trap_cluster_PCA_map.m) |
-| **Table** | [`figures/02_cluster_region_roster.csv`](figures/02_cluster_region_roster.csv) — region → cluster + PC1/PC2 |
+**AI checks (high level)**
 
-**AI check:** Does the agent keep **fixed Step-3 K=4 labels** for the primary map, and treat silhouette/elbow as **supporting** only?
-
----
-
-### Fig 3 — Why clusters 1 and 4 were selected
-
-| | |
-|--|--|
-| **PPT meaning** | Per-phase bars of cluster-mean Active vs Passive. Only **clusters 1 & 4** show A>P at **Post & Reinstatement** (motivation timeline) |
-| **Pack figures** | ![C1](figures/Fig03_Cluster1_density_by_phase.png) ![C4](figures/Fig03_Cluster4_density_by_phase.png) |
-| | Also C2/C3: [`Fig03_Cluster2_...`](figures/Fig03_Cluster2_density_by_phase.png), [`Fig03_Cluster3_...`](figures/Fig03_Cluster3_density_by_phase.png) |
-| **Trajectories** | [`figures/phase_trajectory/Fig_trajectory_Active.png`](figures/phase_trajectory/Fig_trajectory_Active.png), [`..._Passive.png`](figures/phase_trajectory/Fig_trajectory_Passive.png) |
-| **MATLAB output** | `Cluster{1..4}_density_by_phase.png`, `phase_trajectory/04_trajectory_*.png` |
-| **Code** | [`trap_cluster_density_by_phase.m`](code/shared/trap_cluster_density_by_phase.m), [`trap_cluster_trajectory_phase_lines.m`](code/shared/trap_cluster_trajectory_phase_lines.m) |
-| **Table** | [`figures/cluster_phase_density_summary.csv`](figures/cluster_phase_density_summary.csv) |
-
-**AI check:** Agent should **select clusters by phase pattern** (A>P at Post & Rein), not by silhouette alone.
-
----
-
-### Fig 4 — Cluster 4 shortlist (BMAp, LM, RE, CP)
-
-| | |
-|--|--|
-| **PPT meaning** | Within cluster 4: heatmap of Active−Passive across phases; box regions with A>P in craving phases → BMAp, LM, RE, CP |
-| **Pack figure** | ![C4 heat](figures/cluster_AP_split/Fig04_Cluster4_AP_heatmap.png) |
-| **MATLAB output** | `cluster_AP_split/Cluster4_AP_split/Cluster4_direction_heatmap.png` |
-| **Code** | [`trap_cluster_split_by_AP_direction.m`](code/shared/trap_cluster_split_by_AP_direction.m) |
-| **CSV** | [`figures/cluster_AP_split/Cluster4_always_Active_gt_Passive_all_phases.csv`](figures/cluster_AP_split/Cluster4_always_Active_gt_Passive_all_phases.csv) |
-| **Row sort rule** | Top rows = Active>Passive in **all** phases; then by mean Δ |
-
-**AI check:** Can the agent recover **BMAp** (and peers) from Cluster 4 AP heatmap / always-A>P list?
-
----
-
-### Fig 5 — Cluster 1 shortlist (ORBm, CA, AId)
-
-| | |
-|--|--|
-| **PPT meaning** | Within cluster 1: top regions by Post+Reinstatement Active−Passive → ORBm, CA, AId |
-| **Pack figure** | ![C1 heat](figures/cluster_AP_split/Fig05_Cluster1_AP_heatmap.png) |
-| **MATLAB output** | `cluster_AP_split/Cluster1_AP_split/Cluster1_direction_heatmap.png` |
-| **Code** | same [`trap_cluster_split_by_AP_direction.m`](code/shared/trap_cluster_split_by_AP_direction.m) |
-| **CSV** | [`figures/cluster_AP_split/Cluster1_always_Active_gt_Passive_all_phases.csv`](figures/cluster_AP_split/Cluster1_always_Active_gt_Passive_all_phases.csv) |
-
-**AI check:** Can the agent recover **ORBm** (and peers) from Cluster 1?
-
----
-
-### Finding A zoom-in — ORBm & BMAp (PPT slides ~10–21)
-
-| | |
-|--|--|
-| **PPT meaning** | Per-region density **and** cell count across phases; Active peaks Post, dips WD but stays ≫ Passive, rebounds at Rein; Passive flat. Other of the “original 7” fail (AId≈Passive, LM driven by 1 mouse, etc.) |
-| **Pipeline support** | Cluster AP heatmaps + roster CSVs above; region layouts: [`figures/cluster_layout/Fig_layout_Post.png`](figures/cluster_layout/Fig_layout_Post.png) |
-| **Code** | Layout: [`trap_cluster_region_density_layout.m`](code/shared/trap_cluster_region_density_layout.m); top-N reps: [`trap_cluster_representative_topN_plot.m`](code/shared/trap_cluster_representative_topN_plot.m) |
-| **Note for AI benchmark** | Single-region “zoom-in with cell count” panels in the PPT are **assembled in the deck** from cohort spreadsheet columns + pipeline shortlists. The **selection logic** is fully in Steps 03/13; exact ORBm/BMAp multipanel PNGs are presentation-layer. |
-
----
-
-### Finding B — Cluster 3 / COAa (PPT slides ~23–30)
-
-| | |
-|--|--|
-| **PPT meaning** | Passive > Active at Post + Withdrawal; COAa best anatomy in cluster 3 (LGv/FC same numeric pattern) |
-| **Pack figure** | ![C3 heat](figures/cluster_AP_split/FigB_Cluster3_AP_heatmap.png) |
-| **Code** | same AP-split helper for Cluster 3 |
-| **AI check** | Agent should identify **Passive-biased** cluster/regions as a **second** story, not only Active≫Passive |
-
----
-
-### Extra supporting figures (not numbered in PPT but useful for agents)
-
-| Pack file | Meaning | Code |
-|-----------|---------|------|
-| [`figures/representative_regions/Fig_topN_representatives.png`](figures/representative_regions/Fig_topN_representatives.png) | Top-N regions per cluster (silhouette) | `trap_cluster_representative_topN_plot.m` |
-| [`figures/Fig01c` via k_evaluation](figures/k_evaluation/Fig01c_K_sanity_silhouette_elbow.png) | K sanity (silhouette + % variance explained) | `trap_cluster_k_sanity_universal.m` |
+- Keep fixed K=4 cluster labels; select clusters 1 & 4 by A>P at Post & Reinstatement.  
+- Recover BMAp (c4) and ORBm (c1) shortlists, then **only ORBm/BMAp** as Finding A after zoom-in.  
+- Recover **COAa** as Finding B (Passive > Active at Post + WD), not only Active≫Passive.
 
 ---
 
