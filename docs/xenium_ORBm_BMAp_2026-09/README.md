@@ -4,7 +4,7 @@ Copies of the current order list and collaborator comparisons. Canonical code an
 
 | File | What it is |
 |---|---|
-| `Add_genes_Jesse_Allen_Dan_4slides.pptx` | **4-slide add-gene decision** (Dan + Jesse + Allen). |
+| `Add_genes_Jesse_Allen_Dan_4slides.pptx` | **English 3-slide deck:** Dan considered → Jesse considered → final add. |
 | `FINAL_Xenium_panel_ORBm_BMAp_for_MSGS111.xlsx` | Current shared order: 158 genes (144 + 14 Dan). |
 | `Jesse_ORB_vs_Xenium_panel.xlsx` | Jesse lists vs the panel. |
 | `GSE283418_vs_BMAp_panel.xlsx` | Dan 98 vs the panel. |
