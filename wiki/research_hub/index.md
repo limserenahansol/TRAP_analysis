@@ -15,6 +15,7 @@
 ## Cross-project
 
 - [Opioid ↔ TRAP ↔ Genelist — how they connect](cross/opioid_TRAP_genelist.md)
+- Current Xenium ORBm/BMAp pack (2026-09-09): [docs/xenium_ORBm_BMAp_2026-09](../../docs/xenium_ORBm_BMAp_2026-09/)
 
 ## Housekeeping
 
