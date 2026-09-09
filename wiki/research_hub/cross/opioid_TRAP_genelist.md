@@ -23,5 +23,5 @@
 
 ## Open questions
 
-- Keep all 14 Dan extras (114 custom) or trim to `Lamb3` + 012 VGLUT1 border genes to stay near the 100-slot cap?
-- Add Jesse morphine-state genes (`Per2`, `Pcsk1`, `Per1`, `Rxfp1`) if the Xenium readout should include 5-day morphine dependence, not only cell type + TRAP?
+- Keep all 14 Dan extras (114 custom) or trim CEA-border genes to stay near the 100-slot cap?
+- Commit the Allen-filtered Jesse add: `Rxfp1` (free) + `Per2`, `Pcsk1`, `Per1`, `Chrm1`, `Grm8` (+5 custom → 119 if Dan 14 stay)?

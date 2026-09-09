@@ -13,7 +13,8 @@ Shared order workbook: [`FINAL_Xenium_panel_ORBm_BMAp_for_MSGS111.xlsx`](https:/
 
 - **144** curated genes (44 free on Xenium Mouse Brain v1 + **100** custom). All 20 cell types (12 ORBm + 8 BMAp) remain separable.
 - **+14 Dan / GSE283418 genes** appended (block `12_GSE283418_added`) → **158** shared / **114** custom if all are kept.
-- Jesse morphine DEGs were compared, **not** appended. Proposed extras: `Rxfp1` (free), `Per2`, `Pcsk1`, `Per1`.
+- Jesse morphine DEGs were compared, **not** appended. After Allen ORBm re-score (106,122 cells): add `Rxfp1` (free), `Per2`, `Pcsk1`, `Per1`, `Chrm1`, `Grm8`. Optional: `Gpr26`, `Mas1`, `Camk2g`. Skip `Mchr1`.
+- 4-slide deck: [`Add_genes_Jesse_Allen_Dan_4slides.pptx`](https://github.com/limserenahansol/Genelist_analysis_WMB/blob/main/v3/outputs/Add_genes_Jesse_Allen_Dan_4slides.pptx)
 
 Local copies of the deck and figures: [`docs/xenium_ORBm_BMAp_2026-09/`](../../docs/xenium_ORBm_BMAp_2026-09/).
 
