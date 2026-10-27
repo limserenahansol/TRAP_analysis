@@ -58,11 +58,11 @@ python trap_pipeline_py/region_selection_v3.py --depth-rule original        # th
 | 3 forebrain | gray matter only (`trap_AP_filter_forebrain_exclude_fiber_wm.m` rules) → 177 regions | same rules |
 | 4 keep clusters | mean Active − Passive (z within phase) clearly above 0 at Post and Re-exposure: 95% CI lower bound > 0 | v2 used mean > 0 (kept a cluster at +0.03) |
 | 5 screen | Active > Passive in all 4 phases (selection variable, sample-volume density) | same |
-| 6 per mouse (Allen density) | Active ≥ Passive in every phase (Passive higher only within the two SEM bars); Post is the highest Active phase; not one mouse; r(Active, Passive phase means) < 0.66; no Passive rise at Withdrawal | Post peak was "Post > During"; the reversal and Withdrawal checks are new |
+| 6 per mouse (Allen density) | Active ≥ Passive in every phase (Passive higher only within the two SEM bars); Post is the highest Active phase; not one mouse; r(Active, Passive phase means) < 0.66; no Passive rise at Withdrawal; Active rebounds at Re-exposure (Re-exp. > Withdrawal) | Post peak was "Post > During"; the reversal, Withdrawal and rebound checks are new |
 | 7 p-values | exact stratified permutation (all within-phase relabellings), two-sided, Allen density; BH q across the forebrain set and within cluster | same test |
 
 Built-in checks: the v2 depth rule reproduces the Step 3 v2 region ids (286) and the forebrain filter reproduces the 138-region roster.
-Result with the current data: clusters 1 and 4 kept; 22 regions screened; **ORBm, BMAp and PL** pass all checks, FRP passes with
-r = 0.65 (borderline). None of the 177 regions survives FDR (exploratory: selection and testing use the same mice).
+Result with the current data: clusters 1 and 4 kept; 22 regions screened; **ORBm, BMAp and PL** pass all checks (FRP fails the
+rebound check: Active Re-exp. 1,178 vs Withdrawal 1,195 cells/mm³). None of the 177 regions survives FDR (exploratory: selection and testing use the same mice).
 Outputs (`--out`, default `TRAP_OUTPUT_calculated_mm3/region_selection_v3`): `00_checks.csv`, `00_settings.csv`,
 `01_cluster_means_with_95CI.csv`, `02_forebrain_regions.csv`, `03_screen_and_per_mouse_checks.csv`.

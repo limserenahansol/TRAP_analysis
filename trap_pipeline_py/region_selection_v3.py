@@ -20,6 +20,7 @@ How the candidate regions (ORBm, BMAp, PL, ...) are picked from the whole-brain 
                         2 not one mouse   the lower Active Post mouse is above both Passive Post mice
                         3 Passive differs r(Active phase means, Passive phase means) < 0.66 (threshold set after the fact)
                         4 no Passive WD rise  Passive Withdrawal mean <= max(Passive Post, Passive Re-exposure)
+                        5 rebound         Active Re-exposure mean > Active Withdrawal mean (the Active trace comes back up)
   Step 7  p-values    every forebrain region: exact stratified permutation (labels shuffled within phase, all
                       relabellings), T = sum_phase nA nP / (nA + nP) (mean A - mean P), two-sided, Allen density;
                       Benjamini-Hochberg q across the forebrain set and within each cluster. Exploratory (selection and
@@ -226,8 +227,9 @@ def per_mouse_checks(x, phase, group) -> dict:
              post_vs_during_pct=float(100 * (m["Active"][1] / m["Active"][0] - 1)),
              not_one_mouse=bool(ap[0] > pp.max()), r_active_passive=r, passive_differs=r < R_MAX,
              no_passive_wd_rise=bool(m["Passive"][2] <= max(m["Passive"][1], m["Passive"][3])),
-             passive_wd_vs_post_pct=float(100 * (m["Passive"][2] / m["Passive"][1] - 1)))
-    order = ["no_reversal", "post_peak", "not_one_mouse", "passive_differs", "no_passive_wd_rise"]
+             passive_wd_vs_post_pct=float(100 * (m["Passive"][2] / m["Passive"][1] - 1)),
+             rebound=bool(m["Active"][3] > m["Active"][2]), active_reexp_vs_wd_pct=float(100 * (m["Active"][3] / m["Active"][2] - 1)))
+    order = ["no_reversal", "post_peak", "not_one_mouse", "passive_differs", "no_passive_wd_rise", "rebound"]
     c["passes_all"] = all(c[k] for k in order)
     c["first_failed"] = next((k for k in order if not c[k]), "")
     return c
