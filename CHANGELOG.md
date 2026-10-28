@@ -1,5 +1,14 @@
 # What was added / changed (summary)
 
+## 2026-10-28 — final region pipeline (Python, `trap_pipeline_py/`)
+
+| Item | What it does |
+|------|--------------|
+| **RUN_region_pipeline_final.py** | Runs Finding A (v3) → Finding B → mice-as-n tests in one go, checks 30 numbers against the Nov-2026 lab-meeting deck (`00_REFERENCE_CHECKS.csv`, exit code 1 on any failure) and writes `00_SUMMARY.md`. |
+| **region_selection_findingB.py** | Finding B (Passive > Active): v3 steps mirrored — cluster kept if withdrawal 95% CI < 0 and re-exposure CI includes 0; screen Passive > Active at Post and withdrawal; 4 per-mouse checks; cells per mouse and per hemisphere. → COAa, ASO. |
+| **region_tests_mice_as_n.py** | Every forebrain region: permutation, ANOVA, negative binomial (rate ratio, LRT), Post 2 vs 2, BH q; for the candidates the NB LRT p is re-checked over all 12,000 within-phase relabellings (ORBm 0.072, BMAp 0.082, PL 0.158). |
+| **region_selection_v3.py** | Logs the region count of step 1 in `00_checks.csv` (results unchanged). |
+
 ## Done — config & cohort
 
 | Item | Location | What it does |

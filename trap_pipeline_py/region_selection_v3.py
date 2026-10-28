@@ -287,6 +287,7 @@ def main(argv=None):
     regs = [i for i in at.ids if (at.keep_fixed(i) if a.depth_rule == "fixed" else at.keep_original(i))]
     added = set(regs) - set(orig)
     print(f"step 1: {len(regs)} regions ({a.depth_rule} depth rule; {len(added)} added to the v2 set of {len(orig)})")
+    log.append(dict(check="(info) step 1 regions after the depth rule", passed=True, detail=str(len(regs))))
 
     man = load_manifest(a.manifest); mice = man.mouse_id.tolist()
     phase, group = man.phase.values, man.delivery.values

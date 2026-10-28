@@ -1,5 +1,32 @@
 # TRAP pipeline — Python (Steps 1–7)
 
+## FINAL region pipeline (2026-10-28) — the numbers behind the Nov-2026 lab meeting
+
+One command runs everything and checks every number the lab-meeting deck reports (run from the repository root, ~5 min):
+
+```bash
+python trap_pipeline_py/RUN_region_pipeline_final.py --out TRAP_OUTPUT_calculated_mm3/region_selection_final_<date>
+python trap_pipeline_py/RUN_region_pipeline_final.py --no-calibration      # skip the NB shuffle check (~1 min)
+```
+
+| Order | Script | Question | Result with the current data and manifest |
+|---|---|---|---|
+| 1 | `region_selection_v3.py` | Finding A — which regions have more TRAPed cells in Active mice? | 838 → 358 regions → k-means (no labels) → 177 forebrain → clusters 1 + 4 (132) → 22 screened → **ORBm, BMAp, PL** pass all 6 per-mouse checks |
+| 2 | `region_selection_findingB.py` | Finding B — the mirror: more in Passive mice? | cluster 3 kept → 8 regions with Passive > Active at Post and withdrawal → **COAa, ASO** pass all 4 checks (ASO is tiny: median 18 cells per hemisphere) |
+| 3 | `region_tests_mice_as_n.py` | How strong, with mice as n? | ORBm / BMAp: permutation p 0.065 / 0.050; NB rate ratio 1.43 / 1.35, LRT p 0.026 / 0.031, **checked by shuffling 0.072 / 0.082** (PL 0.158); none survives FDR |
+
+Outputs (all in `--out`): `00_SUMMARY.md` (one page), `00_REFERENCE_CHECKS.csv` (fresh numbers vs the deck; the run exits
+with code 1 if any check fails), `01`–`03` Finding A tables, `04B`–`05B` Finding B tables, `06_tests_mice_as_n_forebrain.csv`
+(all 177 regions), `07_nb_lrt_checked_by_shuffling.csv` (survivors + APr, PAR).
+
+Why the shuffle check: the chi-square p of the negative-binomial likelihood-ratio test is too optimistic with 20 mice (for ORBm,
+10.9 % of label shuffles get p < 0.05 by the formula), so the deck quotes the p from refitting the model under all 12,000
+within-phase relabellings. Everything is exploratory: the same mice select and test the regions, and Post alone (2 vs 2 mice)
+cannot go below p = 0.33. Counting cells instead of mice as n gives p < 0.001 for the same data and must not be used.
+
+Inputs (repository root, not on GitHub): `Hansol Lim 561 cell counts + density.xlsx` (selection variable, cells / sample volume),
+`Hansol Lim 561 cell counts + densitynew.xlsx` (Allen density and counts), `TRAP_sample_manifest.csv` (labels, include == 1).
+
 Mirrors **`trap_pipeline_matlab/`** logic. **Step 6 is the core question:**
 
 > For **each** brain region, is TRAP density **significantly different between Active and Passive mice**, tested **separately** in Reinstatement and in Withdrawal?
